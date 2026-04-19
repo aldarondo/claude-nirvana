@@ -1,0 +1,32 @@
+# ── Node ──────────────────────────────────────────
+node_modules/
+dist/
+*.log
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── Docker ────────────────────────────────────────
+*.env.local
+
+# ── Secrets & credentials (always ignore) ─────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+token.json
+credentials.json
+service-account.json
+secrets.json
+secrets/
+config/local.json
+
+# ── OS & editor ───────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.swn
+.vscode/settings.json
+.idea/workspace.xml
