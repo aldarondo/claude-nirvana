@@ -24,6 +24,7 @@ import {
   setFanMode,
   getHistory,
   resetRunningTime,
+  formatStatus,
 } from './api.js';
 
 const server = new Server(
@@ -176,29 +177,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
   }
 });
-
-// ─── Status formatter ────────────────────────────────────────────────────────
-
-function formatStatus(params) {
-  const unit = params.TEMPERATURE_UNIT || 'C';
-  const mode = params.HEAT_MODE || 'UNKNOWN';
-  const heating = params.HEATING === 'ON';
-  const lines = [
-    `🌡️  Water temp:       ${params.WATER_TEMPERATURE ?? 'N/A'}°${unit}`,
-    `🌡️  Water out temp:   ${params.WATER_OUT_TEMP ?? 'N/A'}°${unit}`,
-    `🌡️  Outdoor temp:     ${params.OUTDOOR_TEMP ?? 'N/A'}°${unit}`,
-    `🎯  Target (pool):    ${params.DESIRED_POOL_TEMPERATURE ?? 'N/A'}°${unit}`,
-    `🎯  Target (spa):     ${params.DESIRED_SPA_TEMPERATURE ?? 'N/A'}°${unit}`,
-    `⚡  Mode:             ${mode}`,
-    `🔥  Heating active:   ${heating ? 'YES' : 'NO'}`,
-    `💨  Fan mode:         ${params.FAN_MODE ?? 'N/A'}`,
-    `⏱️  Running time:     ${params.RUNNING_TIME ?? 'N/A'}`,
-    `📶  Last connect:     ${params.CARD_LAST_CONNECT ?? 'N/A'}`,
-    `🔔  Alerts:           ${params.ALERT_LIST?.length ? params.ALERT_LIST.join(', ') : 'None'}`,
-    `🚨  Errors:           ${params.ERROR_LIST?.length ? params.ERROR_LIST.join(', ') : 'None'}`,
-  ];
-  return lines.join('\n');
-}
 
 // ─── Start ───────────────────────────────────────────────────────────────────
 

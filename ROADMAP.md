@@ -19,12 +19,12 @@
 ### Next steps
 - [ ] `[Human]` Create .env from .env.example, fill in Nirvana credentials
 - [ ] `[Human]` Run list_devices to get card_id, add to .env
-- [ ] `[Code]` Write unit tests (tests/unit/api.test.js stubs in place)
+- [x] `[Code]` 2026-04-19 — Write unit tests (tests/unit/api.test.js stubs in place)
 - [ ] `[Code]` Write integration tests once credentials confirmed working
 - [ ] `[Code]` Deploy to Synology NAS via docker compose
 
 ## ✅ Completed
-<!-- dated entries go here -->
+- [x] 2026-04-19 — Completed: Unit tests for api.js — 12 passing tests covering listDevices, getParameters, setTemperature/HeatingMode/FanMode validation, and formatStatus; moved formatStatus to api.js (exported); fixed npm test script for Windows
 
 ## 🚫 Blocked
 <!-- log blockers here -->
