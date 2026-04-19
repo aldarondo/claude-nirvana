@@ -1,0 +1,16 @@
+services:
+  claude-nirvana:
+    image: node:20-alpine
+    container_name: claude-nirvana
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NIRVANA_USERNAME=${NIRVANA_USERNAME}
+      - NIRVANA_PASSWORD=${NIRVANA_PASSWORD}
+      - NIRVANA_CARD_ID=${NIRVANA_CARD_ID}
+    command: node src/index.js
+    stdin_open: true
+    tty: false

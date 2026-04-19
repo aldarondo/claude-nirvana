@@ -2,15 +2,26 @@
 > Tag key: `[Code]` = Claude Code · `[Cowork]` = Claude Cowork · `[Human]` = Charles must act
 
 ## 🔄 In Progress
-- [ ] `[Code]` Define project game plan
+- [ ] `[Human]` Set NIRVANA_USERNAME, NIRVANA_PASSWORD in .env and run `node src/index.js` to verify auth + get card_id via list_devices tool
 
 ## 🔲 Backlog
-- [ ] `[Code]` Define MCP tool interface (on/off, temp query, schedule)
-- [ ] `[Human]` Identify heater control API / hardware interface (e.g. smart plug, Pentair, Hayward, or local API)
-- [ ] `[Code]` Implement MCP server with heater control tools
-- [ ] `[Code]` Write Docker Compose config for Synology deployment
-- [ ] `[Code]` Write unit tests for core logic
-- [ ] `[Code]` Write integration tests for end-to-end flows
+
+### Track 1 — Local HTTP (still to try)
+- [ ] `[Human]` Find module's LAN IP in router DHCP table (MAC: FC:0F:E7:98:06:0A) and probe http://<ip>/ in browser
+
+### Track 2 — Cloud API (IMPLEMENTED ✅)
+- [x] `[Code]` Downloaded + decompiled APK v2.9.6 — extracted full API (2026-04-19)
+  - Base URL: https://nirvana.iot-endpoint.com
+  - Auth: AWS Cognito us-east-2_zqlraOyU4 / USER_PASSWORD_AUTH
+  - See apk-research/FINDINGS.md for complete endpoint map
+- [x] `[Code]` Implemented MCP server: src/index.js, src/api.js, src/auth.js (2026-04-19)
+
+### Next steps
+- [ ] `[Human]` Create .env from .env.example, fill in Nirvana credentials
+- [ ] `[Human]` Run list_devices to get card_id, add to .env
+- [ ] `[Code]` Write unit tests (tests/unit/api.test.js stubs in place)
+- [ ] `[Code]` Write integration tests once credentials confirmed working
+- [ ] `[Code]` Deploy to Synology NAS via docker compose
 
 ## ✅ Completed
 <!-- dated entries go here -->

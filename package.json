@@ -1,0 +1,33 @@
+{
+  "name": "claude-nirvana",
+  "version": "1.0.0",
+  "description": "MCP server for managing the Nirvana pool hot water heater setup at home, deployed as a Docker container on Synology NAS.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/",
+    "start": "node src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aldarondo/claude-nirvana.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/aldarondo/claude-nirvana/issues"
+  },
+  "homepage": "https://github.com/aldarondo/claude-nirvana#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "amazon-cognito-identity-js": "^6.3.16",
+    "axios": "^1.15.0"
+  },
+  "devDependencies": {
+    "jest": "^30.3.0"
+  }
+}
