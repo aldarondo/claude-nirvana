@@ -27,5 +27,6 @@
 - [x] 2026-04-19 — Completed: Unit tests for api.js — 12 passing tests covering listDevices, getParameters, setTemperature/HeatingMode/FanMode validation, and formatStatus; moved formatStatus to api.js (exported); fixed npm test script for Windows
 
 ## 🚫 Blocked
+- ❌ [docker-monitor:container-stopped] Container `claude-nirvana` is not running on the NAS — check `docker logs claude-nirvana` and restart — 2026-04-21 08:42 UTC
 - ❌ [docker-monitor:no-ghcr-image] Container `claude-nirvana` uses `node:20-alpine` — migrate to `ghcr.io/aldarondo/...` with a GitHub Actions build-push workflow — 2026-04-21 08:00 UTC
 <!-- log blockers here -->
