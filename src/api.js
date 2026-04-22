@@ -110,6 +110,9 @@ export async function getParameters(cardId, params = null) {
  */
 export async function setTemperature(cardId, mode, value) {
   if (!['pool', 'spa'].includes(mode)) throw new Error('mode must be "pool" or "spa"');
+  if (!Number.isFinite(value)) throw new Error('temperature must be a finite number');
+  // Valid range covers both °C (1–50) and °F (34–110) for pool/spa use
+  if (value < 1 || value > 110) throw new Error('temperature out of valid range (1–110)');
   const c = await client();
   const { data } = await c.post('/pump/desired/setpoint', { card_id: cardId, mode, value });
   return data;

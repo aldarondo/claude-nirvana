@@ -37,7 +37,8 @@ export async function getAccessToken(username, password) {
     try {
       const token = await refreshSession();
       if (token) return token;
-    } catch (_) {
+    } catch (err) {
+      process.stderr.write(`[auth] session refresh failed: ${err.message}\n`);
       cachedSession = null;
     }
   }

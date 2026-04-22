@@ -93,13 +93,45 @@ The server listens on port **8769** (`http://nas:8769/sse`).
 }
 ```
 
+## Temperature ranges
+
+The `set_temperature` tool accepts values in whichever unit the device is configured to use. Call `get_status` first — the status output shows the active unit (°C or °F).
+
+| Unit | Valid range |
+|------|-------------|
+| °C   | 1 – 50      |
+| °F   | 34 – 110    |
+
+## Troubleshooting
+
+**`list_devices` returns an empty array**
+The Nirvana account has no enrolled devices. Log in to the Nirvana app and confirm the heat pump is paired to the account.
+
+**Authentication errors**
+Verify `NIRVANA_USERNAME` and `NIRVANA_PASSWORD` in `.env` match the Nirvana mobile app credentials. Passwords are case-sensitive.
+
+**`get_status` shows `⚠️ OFFLINE`**
+The device hasn't checked in for more than 10 minutes. Check that the heat pump has internet connectivity. The device communicates via Nirvana's cloud API — local network access is not required.
+
+**Docker: expected log output on healthy start**
+```
+claude-nirvana MCP server running (SSE) on 0.0.0.0:8769
+```
+If you see a crash instead, run `docker compose logs claude-nirvana` and check for missing env vars.
+
+## Security notes
+
+- `.env` contains plaintext credentials — do not commit it or expose it outside the NAS
+- The SSE endpoint (`http://nas:8769/sse`) has no authentication while in active development; restrict network access or firewall the port when not in use
+- Log files in `/app/data/nirvana.log` are rotated at 500 KB; they do not contain passwords but do contain device identifiers
+
 ## Tests
 ```bash
 npm test
 ```
 
 ## Project Status
-MCP server implemented. Pending: credential verification + Synology deployment. See [ROADMAP.md](ROADMAP.md).
+MCP server live on Synology NAS. See [ROADMAP.md](ROADMAP.md).
 
 ---
 **Publisher:** Xity Software, LLC

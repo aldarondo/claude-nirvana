@@ -12,7 +12,7 @@
 - [x] `[Code]` Downloaded + decompiled APK v2.9.6 — extracted full API (2026-04-19)
   - Base URL: https://nirvana.iot-endpoint.com
   - Auth: AWS Cognito us-east-2_zqlraOyU4 / USER_PASSWORD_AUTH
-  - See apk-research/FINDINGS.md for complete endpoint map
+  - Endpoints: /customer/devices, /pump/parameter, /pump/desired/setpoint, /pump/desired/heating-mode, /pump/desired/fan-mode, /pump/desired/reset-running-time, /customer/get-history
 - [x] `[Code]` Implemented MCP server: src/index.js, src/api.js, src/auth.js (2026-04-19)
 
 ### Build & Infrastructure

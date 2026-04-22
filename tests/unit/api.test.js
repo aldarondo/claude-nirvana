@@ -1,6 +1,3 @@
-// All features require unit + integration tests before a task is marked complete.
-// ESM project — uses jest.unstable_mockModule + dynamic imports
-
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 
 // Set env vars before any module import so client() doesn't throw on missing credentials
@@ -44,6 +41,25 @@ describe('Nirvana API client', () => {
     expect(result).toEqual(devices);
   });
 
+  test('listDevices propagates network errors', async () => {
+    mockGet.mockRejectedValue(new Error('ECONNREFUSED'));
+    await expect(listDevices()).rejects.toThrow('ECONNREFUSED');
+  });
+
+  test('getParameters unwraps reported wrapper when present', async () => {
+    const reported = { WATER_TEMPERATURE: 28, HEAT_MODE: 'POOL' };
+    mockPost.mockResolvedValue({ data: { reported } });
+    const result = await getParameters('card-1');
+    expect(result).toEqual(reported);
+  });
+
+  test('getParameters returns data directly when no reported wrapper', async () => {
+    const params = { WATER_TEMPERATURE: 28, HEAT_MODE: 'POOL' };
+    mockPost.mockResolvedValue({ data: params });
+    const result = await getParameters('card-1');
+    expect(result).toEqual(params);
+  });
+
   test('getParameters requests correct default param set', async () => {
     const params = { WATER_TEMPERATURE: 28, HEAT_MODE: 'POOL' };
     mockPost.mockResolvedValue({ data: params });
@@ -62,6 +78,22 @@ describe('Nirvana API client', () => {
 
   test('setTemperature throws if mode is not pool or spa', async () => {
     await expect(setTemperature('card-1', 'hot_tub', 38)).rejects.toThrow('mode must be "pool" or "spa"');
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  test('setTemperature throws for NaN temperature', async () => {
+    await expect(setTemperature('card-1', 'pool', NaN)).rejects.toThrow('finite number');
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  test('setTemperature throws for Infinity temperature', async () => {
+    await expect(setTemperature('card-1', 'pool', Infinity)).rejects.toThrow('finite number');
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  test('setTemperature throws for out-of-range temperature', async () => {
+    await expect(setTemperature('card-1', 'pool', -5)).rejects.toThrow('out of valid range');
+    await expect(setTemperature('card-1', 'pool', 200)).rejects.toThrow('out of valid range');
     expect(mockPost).not.toHaveBeenCalled();
   });
 
