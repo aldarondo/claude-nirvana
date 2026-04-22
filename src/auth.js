@@ -53,6 +53,7 @@ function signIn(username, password) {
       Password: password,
     });
 
+    user.setAuthenticationFlowType('USER_PASSWORD_AUTH');
     user.authenticateUser(authDetails, {
       onSuccess(session) {
         cachedSession = session;

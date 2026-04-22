@@ -2,7 +2,6 @@
 > Tag key: `[Code]` = Claude Code · `[Cowork]` = Claude Cowork · `[Human]` = Charles must act
 
 ## 🔄 In Progress
-- [ ] `[Human]` Set NIRVANA_USERNAME, NIRVANA_PASSWORD in .env and run `node src/index.js` to verify auth + get card_id via list_devices tool
 
 ## 🔲 Backlog
 
@@ -21,11 +20,10 @@
 - [ ] `[Code]` Add weekly scheduled rebuild — GitHub Actions `schedule: cron` to repull and push a fresh image every week, picking up base-image security patches
 
 ### Next steps
-- [ ] `[Human]` Create .env from .env.example, fill in Nirvana credentials
-- [ ] `[Human]` Run list_devices to get card_id, add to .env
+- [x] `[Human]` 2026-04-22 — Created .env on NAS; credentials + card_id FC-0F-E7-98-06-0A confirmed
 - [x] `[Code]` 2026-04-19 — Write unit tests (tests/unit/api.test.js stubs in place)
 - [ ] `[Code]` Write integration tests once credentials confirmed working
-- [ ] `[Code]` Deploy to Synology NAS via docker compose
+- [x] `[Code]` 2026-04-22 — Deployed to Synology NAS via docker compose; live API connection verified
 
 ## ✅ Completed
 - [x] 2026-04-19 — Completed: Unit tests for api.js — 12 passing tests covering listDevices, getParameters, setTemperature/HeatingMode/FanMode validation, and formatStatus; moved formatStatus to api.js (exported); fixed npm test script for Windows

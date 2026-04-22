@@ -99,7 +99,7 @@ export async function getParameters(cardId, params = null) {
     PARAMS.LAST_CONNECT,
   ];
   const { data } = await c.post('/pump/parameter', { card_id: cardId, params: requestParams });
-  return data;
+  return data.reported ?? data;
 }
 
 /**
@@ -189,7 +189,7 @@ export function formatStatus(params) {
     `⚡  Mode:             ${mode}`,
     `🔥  Heating active:   ${heating ? 'YES' : 'NO'}`,
     `💨  Fan mode:         ${params.FAN_MODE ?? 'N/A'}`,
-    `⏱️  Running time:     ${params.RUNNING_TIME ?? 'N/A'}`,
+    `⏱️  Running time:     ${params.RUNNING_TIME ? `${params.RUNNING_TIME.TOTAL}h total (${params.RUNNING_TIME.MONTH}h this month)` : 'N/A'}`,
     `📶  Last connect:     ${params.CARD_LAST_CONNECT ?? 'N/A'}`,
     `🔔  Alerts:           ${params.ALERT_LIST?.length ? params.ALERT_LIST.join(', ') : 'None'}`,
     `🚨  Errors:           ${params.ERROR_LIST?.length ? params.ERROR_LIST.join(', ') : 'None'}`,
