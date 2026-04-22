@@ -40,16 +40,29 @@ npm start
 # In Claude: call list_devices → copy card_id → add to .env as NIRVANA_CARD_ID
 ```
 
-### 4. Run locally
+### 4. Run locally (stdio — Claude Desktop subprocess)
 ```bash
 npm start
 ```
 
-### 5. Deploy to Synology NAS
+### 5. Run on NAS (SSE — persistent Docker container)
+Set `MCP_TRANSPORT=sse` in `.env`, then:
 ```bash
 docker compose up -d
 docker compose logs -f
 ```
+The server listens on port **8769** (`http://nas:8769/sse`).
+
+### Environment variables
+
+| Variable | Description |
+|---|---|
+| `NIRVANA_USERNAME` | Nirvana app account email |
+| `NIRVANA_PASSWORD` | Nirvana app account password |
+| `NIRVANA_CARD_ID` | Device card_id (from `list_devices`) |
+| `MCP_TRANSPORT` | `stdio` (default) or `sse` |
+| `MCP_HOST` | SSE bind address (default `0.0.0.0`) |
+| `MCP_PORT` | SSE port (default `8769`) |
 
 ## MCP Tools
 

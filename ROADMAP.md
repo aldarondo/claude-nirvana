@@ -16,6 +16,7 @@
 - [x] `[Code]` Implemented MCP server: src/index.js, src/api.js, src/auth.js (2026-04-19)
 
 ### Build & Infrastructure
+- [x] `[Code]` 2026-04-22 — Add SSE transport mode (port 8769) for NAS/coordinator use — `MCP_TRANSPORT=sse` env var
 - [ ] `[Code]` Add GHCR build-push workflow — migrate container from `node:20-alpine` to a versioned GHCR image (`ghcr.io/aldarondo/...`) with GitHub Actions auto-deploy
 - [ ] `[Code]` Add weekly scheduled rebuild — GitHub Actions `schedule: cron` to repull and push a fresh image every week, picking up base-image security patches
 

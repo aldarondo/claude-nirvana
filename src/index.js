@@ -11,10 +11,12 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import express from 'express';
 
 import {
   listDevices,
@@ -189,6 +191,38 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // ─── Start ───────────────────────────────────────────────────────────────────
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
-console.error('claude-nirvana MCP server running');
+const MCP_TRANSPORT = process.env.MCP_TRANSPORT || 'stdio';
+const MCP_HOST = process.env.MCP_HOST || '0.0.0.0';
+const MCP_PORT = parseInt(process.env.MCP_PORT || '8769', 10);
+
+if (MCP_TRANSPORT === 'sse') {
+  const app = express();
+  app.use(express.json());
+
+  const transports = {};
+
+  app.get('/sse', async (req, res) => {
+    const transport = new SSEServerTransport('/messages', res);
+    transports[transport.sessionId] = transport;
+    res.on('close', () => delete transports[transport.sessionId]);
+    await server.connect(transport);
+  });
+
+  app.post('/messages', async (req, res) => {
+    const sessionId = req.query.sessionId;
+    const transport = transports[sessionId];
+    if (transport) {
+      await transport.handlePostMessage(req, res);
+    } else {
+      res.status(400).json({ error: 'Session not found' });
+    }
+  });
+
+  app.listen(MCP_PORT, MCP_HOST, () => {
+    console.error(`claude-nirvana MCP server running (SSE) on ${MCP_HOST}:${MCP_PORT}`);
+  });
+} else {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error('claude-nirvana MCP server running (stdio)');
+}

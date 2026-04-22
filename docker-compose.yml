@@ -8,10 +8,12 @@ services:
       - .:/app
       - /app/node_modules
       - ./data:/app/data
+    ports:
+      - "8769:8769"
     environment:
       - NIRVANA_USERNAME=${NIRVANA_USERNAME}
       - NIRVANA_PASSWORD=${NIRVANA_PASSWORD}
       - NIRVANA_CARD_ID=${NIRVANA_CARD_ID}
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-sse}
+      - MCP_PORT=${MCP_PORT:-8769}
     command: node src/index.js
-    stdin_open: true
-    tty: false
