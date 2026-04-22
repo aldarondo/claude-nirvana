@@ -26,6 +26,7 @@ import {
   resetRunningTime,
   formatStatus,
 } from './api.js';
+import { logToolCall, logStatus, logError } from './logger.js';
 
 const server = new Server(
   { name: 'claude-nirvana', version: '1.0.0' },
@@ -124,12 +125,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (name) {
       case 'list_devices': {
         const devices = await listDevices();
+        logToolCall('list_devices', {}, { count: devices.length });
         return { content: [{ type: 'text', text: JSON.stringify(devices, null, 2) }] };
       }
 
       case 'get_status': {
         if (!cardId) throw new Error('card_id required (pass as argument or set NIRVANA_CARD_ID env var)');
         const params = await getParameters(cardId);
+        logStatus(cardId, params);
         const status = formatStatus(params);
         return { content: [{ type: 'text', text: status }] };
       }
@@ -139,12 +142,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { temperature, mode } = args;
         if (typeof temperature !== 'number') throw new Error('temperature must be a number');
         const result = await setTemperature(cardId, mode, temperature);
+        logToolCall('set_temperature', { card_id: cardId, mode, temperature }, result);
         return { content: [{ type: 'text', text: `✅ ${mode.toUpperCase()} setpoint updated to ${temperature}°\n${JSON.stringify(result)}` }] };
       }
 
       case 'set_mode': {
         if (!cardId) throw new Error('card_id required');
         const result = await setHeatingMode(cardId, args.mode);
+        logToolCall('set_mode', { card_id: cardId, mode: args.mode }, result);
         const label = args.mode === 'OFF' ? '🔴 Heat pump turned OFF' : `🟢 Heat pump set to ${args.mode} mode`;
         return { content: [{ type: 'text', text: `${label}\n${JSON.stringify(result)}` }] };
       }
@@ -152,18 +157,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'set_fan_mode': {
         if (!cardId) throw new Error('card_id required');
         const result = await setFanMode(cardId, args.mode);
+        logToolCall('set_fan_mode', { card_id: cardId, mode: args.mode }, result);
         return { content: [{ type: 'text', text: `✅ Fan mode set to ${args.mode}\n${JSON.stringify(result)}` }] };
       }
 
       case 'get_history': {
         if (!cardId) throw new Error('card_id required');
         const history = await getHistory(cardId);
+        logToolCall('get_history', { card_id: cardId }, { entries: history?.length ?? 0 });
         return { content: [{ type: 'text', text: JSON.stringify(history, null, 2) }] };
       }
 
       case 'reset_runtime': {
         if (!cardId) throw new Error('card_id required');
         const result = await resetRunningTime(cardId);
+        logToolCall('reset_runtime', { card_id: cardId }, result);
         return { content: [{ type: 'text', text: `✅ Running time reset\n${JSON.stringify(result)}` }] };
       }
 
@@ -171,6 +179,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(`Unknown tool: ${name}`);
     }
   } catch (err) {
+    logError(name, err.message);
     return {
       content: [{ type: 'text', text: `❌ Error: ${err.message}` }],
       isError: true,

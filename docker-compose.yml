@@ -7,6 +7,7 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+      - ./data:/app/data
     environment:
       - NIRVANA_USERNAME=${NIRVANA_USERNAME}
       - NIRVANA_PASSWORD=${NIRVANA_PASSWORD}
