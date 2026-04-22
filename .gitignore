@@ -30,3 +30,5 @@ Thumbs.db
 *.swn
 .vscode/settings.json
 .idea/workspace.xml
+.githooks/
+apk-research/

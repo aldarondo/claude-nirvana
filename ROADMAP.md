@@ -16,6 +16,10 @@
   - See apk-research/FINDINGS.md for complete endpoint map
 - [x] `[Code]` Implemented MCP server: src/index.js, src/api.js, src/auth.js (2026-04-19)
 
+### Build & Infrastructure
+- [ ] `[Code]` Add GHCR build-push workflow — migrate container from `node:20-alpine` to a versioned GHCR image (`ghcr.io/aldarondo/...`) with GitHub Actions auto-deploy
+- [ ] `[Code]` Add weekly scheduled rebuild — GitHub Actions `schedule: cron` to repull and push a fresh image every week, picking up base-image security patches
+
 ### Next steps
 - [ ] `[Human]` Create .env from .env.example, fill in Nirvana credentials
 - [ ] `[Human]` Run list_devices to get card_id, add to .env
