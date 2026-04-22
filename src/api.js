@@ -180,7 +180,19 @@ export function formatStatus(params) {
   const unit = params.TEMPERATURE_UNIT || 'C';
   const mode = params.HEAT_MODE || 'UNKNOWN';
   const heating = params.HEATING === 'ON';
+
+  const lastConnect = params.CARD_LAST_CONNECT;
+  const minutesAgo = lastConnect
+    ? Math.floor((Date.now() - new Date(lastConnect).getTime()) / 60000)
+    : null;
+  const onlineStatus = minutesAgo === null
+    ? '❓ UNKNOWN'
+    : minutesAgo <= 10
+      ? `✅ ONLINE (${minutesAgo}m ago)`
+      : `⚠️  OFFLINE (last seen ${minutesAgo}m ago)`;
+
   const lines = [
+    `📶  Device status:    ${onlineStatus}`,
     `🌡️  Water temp:       ${params.WATER_TEMPERATURE ?? 'N/A'}°${unit}`,
     `🌡️  Water out temp:   ${params.WATER_OUT_TEMP ?? 'N/A'}°${unit}`,
     `🌡️  Outdoor temp:     ${params.OUTDOOR_TEMP ?? 'N/A'}°${unit}`,
@@ -190,7 +202,6 @@ export function formatStatus(params) {
     `🔥  Heating active:   ${heating ? 'YES' : 'NO'}`,
     `💨  Fan mode:         ${params.FAN_MODE ?? 'N/A'}`,
     `⏱️  Running time:     ${params.RUNNING_TIME ? `${params.RUNNING_TIME.TOTAL}h total (${params.RUNNING_TIME.MONTH}h this month)` : 'N/A'}`,
-    `📶  Last connect:     ${params.CARD_LAST_CONNECT ?? 'N/A'}`,
     `🔔  Alerts:           ${params.ALERT_LIST?.length ? params.ALERT_LIST.join(', ') : 'None'}`,
     `🚨  Errors:           ${params.ERROR_LIST?.length ? params.ERROR_LIST.join(', ') : 'None'}`,
   ];

@@ -120,8 +120,8 @@ describe('formatStatus', () => {
     DESIRED_POOL_TEMPERATURE: 30,
     DESIRED_SPA_TEMPERATURE: 38,
     FAN_MODE: 'SMART',
-    RUNNING_TIME: 1234,
-    CARD_LAST_CONNECT: '2026-04-19T10:00:00Z',
+    RUNNING_TIME: { TOTAL: 1234, MONTH: 26, DAY: 0, WEEK: 0 },
+    CARD_LAST_CONNECT: new Date(Date.now() - 60000).toISOString(),
     ALERT_LIST: [],
     ERROR_LIST: [],
   };
@@ -133,7 +133,8 @@ describe('formatStatus', () => {
     expect(result).toContain('POOL');
     expect(result).toContain('YES');   // heating active
     expect(result).toContain('SMART');
-    expect(result).toContain('1234');
+    expect(result).toContain('1234h total');
+    expect(result).toContain('ONLINE');
     expect(result).toContain('None'); // no alerts/errors
   });
 
