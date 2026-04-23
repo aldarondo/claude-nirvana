@@ -11,7 +11,7 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -218,35 +218,29 @@ if (!process.env.MCP_TEST_MODE) {
   const MCP_HOST = process.env.MCP_HOST || '0.0.0.0';
   const MCP_PORT = parseInt(process.env.MCP_PORT || '8769', 10);
 
-  const server = createServer();
-
   if (MCP_TRANSPORT === 'sse') {
     const app = express();
     app.use(express.json());
 
-    const transports = {};
-
-    app.get('/sse', async (req, res) => {
-      const transport = new SSEServerTransport('/messages', res);
-      transports[transport.sessionId] = transport;
-      res.on('close', () => delete transports[transport.sessionId]);
+    app.post('/mcp', async (req, res) => {
+      const server = createServer();
+      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+      res.on('close', () => {
+        transport.close();
+        server.close();
+      });
     });
 
-    app.post('/messages', async (req, res) => {
-      const sessionId = req.query.sessionId;
-      const transport = transports[sessionId];
-      if (transport) {
-        await transport.handlePostMessage(req, res);
-      } else {
-        res.status(400).json({ error: 'Session not found' });
-      }
-    });
+    app.get('/mcp', (req, res) => res.status(405).end());
+    app.delete('/mcp', (req, res) => res.status(405).end());
 
     app.listen(MCP_PORT, MCP_HOST, () => {
-      console.error(`claude-nirvana MCP server running (SSE) on ${MCP_HOST}:${MCP_PORT}`);
+      console.error(`claude-nirvana MCP server running (StreamableHTTP) on ${MCP_HOST}:${MCP_PORT}`);
     });
   } else {
+    const server = createServer();
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error('claude-nirvana MCP server running (stdio)');
