@@ -5,10 +5,12 @@
 
 ### Local Control — Phase 1: Traffic Recon
 See full plan: [LOCAL_CONTROL_PLAN.md](LOCAL_CONTROL_PLAN.md)
-- [ ] `[Code]` Look up heat pump IP by MAC `FC:0F:E7:98:06:0A` via NAS ARP table / nmap scan
-- [ ] `[Code]` Build `nirvana-capture` Docker container (arpspoof + tcpdump + mitmproxy) on NAS
-- [ ] `[Code]` Write `capture.sh` / `cleanup.sh` scripts
-- [ ] `[Human]` Run 30-min capture; export pcap + mitmproxy flows
+- [x] `[Code]` 2026-04-23 — Confirmed pump MAC `FC:0F:E7:98:06:0A` is NOT on NAS subnet (192.168.0.0/24) — on separate IoT VLAN. Need Cox Panoramic app to find pump IP and subnet.
+- [x] `[Code]` 2026-04-23 — Built `nirvana-capture` Docker container (`capture/Dockerfile`, `capture/docker-compose.yml`)
+- [x] `[Code]` 2026-04-23 — Wrote `capture/capture.sh` and `capture/cleanup.sh`
+- [ ] `[Human]` Find pump IP + subnet in Cox Panoramic app (MAC: FC:0F:E7:98:06:0A). **Critical:** NAS must be on same L2 as pump for ARP spoofing — if pump is on IoT VLAN, check if NAS can be added to that VLAN.
+- [ ] `[Human]` Deploy capture container: `PUMP_IP=<ip> ROUTER_IP=<gw> IFACE=<iface> docker compose up` in `capture/` on NAS
+- [ ] `[Human]` Run 30-min capture; export pcap + mitmproxy flows from `/volume1/docker/nirvana-capture/captures/`
 - [ ] `[Code]` Analyze results → decide Phase 2 path (proxy / IoT direct / Modbus)
 
 ## 🔲 Backlog
@@ -44,7 +46,6 @@ See full plan: [LOCAL_CONTROL_PLAN.md](LOCAL_CONTROL_PLAN.md)
 - [x] 2026-04-19 — Completed: Unit tests for api.js — 12 passing tests covering listDevices, getParameters, setTemperature/HeatingMode/FanMode validation, and formatStatus; moved formatStatus to api.js (exported); fixed npm test script for Windows
 
 ## 🚫 Blocked
-- ❌ [docker-monitor:container-stopped] Container `claude-nirvana` is not running on the NAS — check `docker logs claude-nirvana` and restart — 2026-04-23 08:42 UTC
-
 - ❌ [docker-monitor:no-ghcr-image] Container `claude-nirvana` uses `node:20-alpine` — migrate to `ghcr.io/aldarondo/...` with a GitHub Actions build-push workflow — 2026-04-23 08:00 UTC
+- ❌ Phase 1 capture blocked: pump (MAC FC:0F:E7:98:06:0A) is on a separate IoT VLAN — not reachable from NAS subnet 192.168.0.0/24. ARP spoofing requires same L2 segment. **Charles must:** (1) find pump IP/subnet in Cox Panoramic app, (2) determine if NAS can join that VLAN, or use a device already on the IoT network as the capture host.
 <!-- log blockers here -->

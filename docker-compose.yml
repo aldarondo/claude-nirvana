@@ -1,12 +1,9 @@
 services:
   claude-nirvana:
-    image: node:20-alpine
+    image: ghcr.io/aldarondo/claude-nirvana:latest
     container_name: claude-nirvana
     restart: unless-stopped
-    working_dir: /app
     volumes:
-      - .:/app
-      - /app/node_modules
       - ./data:/app/data
     ports:
       - "8769:8769"
@@ -16,4 +13,8 @@ services:
       - NIRVANA_CARD_ID=${NIRVANA_CARD_ID}
       - MCP_TRANSPORT=${MCP_TRANSPORT:-sse}
       - MCP_PORT=${MCP_PORT:-8769}
-    command: node src/index.js
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
