@@ -3,6 +3,14 @@
 
 ## 🔄 In Progress
 
+### Local Control — Phase 1: Traffic Recon
+See full plan: [LOCAL_CONTROL_PLAN.md](LOCAL_CONTROL_PLAN.md)
+- [ ] `[Code]` Look up heat pump IP by MAC `FC:0F:E7:98:06:0A` via NAS ARP table / nmap scan
+- [ ] `[Code]` Build `nirvana-capture` Docker container (arpspoof + tcpdump + mitmproxy) on NAS
+- [ ] `[Code]` Write `capture.sh` / `cleanup.sh` scripts
+- [ ] `[Human]` Run 30-min capture; export pcap + mitmproxy flows
+- [ ] `[Code]` Analyze results → decide Phase 2 path (proxy / IoT direct / Modbus)
+
 ## 🔲 Backlog
 
 ### Track 1 — Local HTTP (still to try)
@@ -19,6 +27,12 @@
 - [x] `[Code]` 2026-04-22 — Add SSE transport mode (port 8769) for NAS/coordinator use — `MCP_TRANSPORT=sse` env var
 - [ ] `[Code]` Add GHCR build-push workflow — migrate container from `node:20-alpine` to a versioned GHCR image (`ghcr.io/aldarondo/...`) with GitHub Actions auto-deploy
 - [ ] `[Code]` Add weekly scheduled rebuild — GitHub Actions `schedule: cron` to repull and push a fresh image every week, picking up base-image security patches
+
+### Local Control — Phase 2 (pending Phase 1 results)
+- [ ] `[Code]` Phase 2A — Local proxy server (if no TLS pinning)
+- [ ] `[Code]` Phase 2B — AWS IoT direct connection (if TLS pinning blocks 2A)
+- [ ] `[Code]` Phase 2C — Modbus/RS485 wired control (if hardware supports it — check nameplate)
+- [ ] `[Code]` Phase 3 — Replace MCP primary path: local → cloud fallback → email alert
 
 ### Next steps
 - [x] `[Human]` 2026-04-22 — Created .env on NAS; credentials + card_id FC-0F-E7-98-06-0A confirmed
