@@ -3,24 +3,24 @@
 
 ## 🔄 In Progress
 
-### Local Control — Phase 1: Traffic Recon
-See full plan: [LOCAL_CONTROL_PLAN.md](LOCAL_CONTROL_PLAN.md)
-- [x] `[Code]` 2026-04-25 — Pump found at **192.168.0.122** (network MAC `52:d4:f7:98:06:0a`). On same subnet as NAS — ARP spoofing is feasible. No inbound TCP ports open (outbound-only device). Earlier "IoT VLAN" assessment was wrong.
-- [x] `[Code]` 2026-04-23 — Built `nirvana-capture` Docker container (`capture/Dockerfile`, `capture/docker-compose.yml`)
-- [x] `[Code]` 2026-04-23 — Wrote `capture/capture.sh` and `capture/cleanup.sh`
-- [x] `[Human]` 2026-04-25 — Deploy capture container and run pcap
-- [x] `[Code]` 2026-04-25 — Analyzed pcap: pump uses HTTPS REST to `nirvana.iot-endpoint.com` (uvicorn/ALB), no MQTT, no IoT Core, no TLS pinning → Phase 2A
-- [x] `[Human]` 2026-04-25 — Cox DHCP changed to .4–.122 (excludes .2 JuiceBox, .3 pump)
-- [x] `[Code]` 2026-04-25 — juicebox dnsmasq updated: reserve .3 for pump MAC, redirect `nirvana.iot-endpoint.com` → NAS
-- [x] `[Human]` 2026-04-25 — Reboot pump (landed at .122 — Cox ceiling fix still needed)
-- [ ] `[Human]` Change Cox DHCP ceiling from .122 → .121 so pump at .122 is outside pool → forces DHCPDISCOVER → dnsmasq wins with .3
-- [ ] `[Human]` Reboot pump again after Cox ceiling fix
-- [x] `[Code]` 2026-04-25 — Phase 2A proxy built: `proxy/` — nginx routes nirvana.iot-endpoint.com:443→proxy container HTTP:8444; proxy logs+forwards to real cloud; build-proxy.yml deploys via sshpass; nginx conf written to NAS sites-enabled
+### Monday 2026-04-27 — Phase 3 Decision Check
+- [ ] `[Human]` Review proxy logs for the week: `docker logs nirvana-proxy | grep heartbeat`
+  - Look for `pump went silent` events and their `silent_sec` durations
+  - If drops are frequent (>1/day) or long (>10 min) → prioritize Phase 3
+  - If drops are rare/brief → cloud API path is good enough, defer Phase 3
+- [ ] `[Human]` Decide: build Phase 3 local control server, or leave on cloud API
 
 ## 🔲 Backlog
 
-### Track 1 — Local HTTP (still to try)
-- [ ] `[Human]` Find module's LAN IP in router DHCP table (MAC: FC:0F:E7:98:06:0A) and probe http://<ip>/ in browser
+### Phase 3 — Local Control Server (build if Monday review warrants it)
+- [ ] `[Code]` Local command server: handle `findQueuesByCardId` (inject queued cmds) + store state from `SetParameters` POSTs
+- [ ] `[Code]` Proxy routing update: intercept those two endpoints locally, forward everything else to cloud
+- [ ] `[Code]` MCP server update: add `local` mode that queues commands to local server; cloud API as fallback
+- [ ] `[Code]` Phase 2B — AWS IoT direct connection (only if TLS pinning blocks Phase 2A — confirmed not needed)
+- [ ] `[Code]` Phase 2C — Modbus/RS485 wired control (check nameplate if interested)
+
+### Track 1 — Local HTTP
+- [ ] `[Human]` Probe http://192.168.0.3/ in browser — pump may have a local web UI
 
 ### Track 2 — Cloud API (IMPLEMENTED ✅)
 - [x] `[Code]` Downloaded + decompiled APK v2.9.6 — extracted full API (2026-04-19)
@@ -31,24 +31,27 @@ See full plan: [LOCAL_CONTROL_PLAN.md](LOCAL_CONTROL_PLAN.md)
 
 ### Build & Infrastructure
 - [x] `[Code]` 2026-04-22 — Add SSE transport mode (port 8774) for NAS/coordinator use — `MCP_TRANSPORT=sse` env var
-- [x] `[Code]` 2026-04-25 — Add GHCR build-push workflow — test → build → push to `ghcr.io/aldarondo/claude-nirvana:latest` + SHA tag; SSH key auth via Cloudflare tunnel (replaces broken sshpass approach)
-- [x] `[Code]` 2026-04-25 — Weekly scheduled rebuild — `schedule: cron: "0 8 * * 0"` in build.yml picks up base-image security patches every Sunday
-
-### Local Control — Phase 2 (pending Phase 1 results)
-- [x] `[Code]` 2026-04-25 — Phase 2A — Local proxy server (no TLS pinning confirmed) — COMPLETE
-- [ ] `[Code]` Phase 2B — AWS IoT direct connection (if TLS pinning blocks 2A)
-- [ ] `[Code]` Phase 2C — Modbus/RS485 wired control (if hardware supports it — check nameplate)
-- [ ] `[Code]` Phase 3 — Replace MCP primary path: local → cloud fallback → email alert
-
-### Next steps
-- [x] `[Human]` 2026-04-22 — Created .env on NAS; credentials + card_id FC-0F-E7-98-06-0A confirmed
-- [x] `[Code]` 2026-04-19 — Write unit tests (tests/unit/api.test.js stubs in place)
-- [x] `[Code]` 2026-04-25 — Integration tests complete — mcp.test.js covers all 7 tools end-to-end via InMemoryTransport; auth.test.js covers token caching, refresh, and sign-in failure paths
-- [x] `[Code]` 2026-04-22 — Deployed to Synology NAS via docker compose; live API connection verified
+- [x] `[Code]` 2026-04-25 — Add GHCR build-push workflow — test → build → push to `ghcr.io/aldarondo/claude-nirvana:latest` + SHA tag
+- [x] `[Code]` 2026-04-25 — Weekly scheduled rebuild — `schedule: cron: "0 8 * * 0"` in build.yml
 
 ## ✅ Completed
-- [x] 2026-04-19 — Completed: Unit tests for api.js — 12 passing tests covering listDevices, getParameters, setTemperature/HeatingMode/FanMode validation, and formatStatus; moved formatStatus to api.js (exported); fixed npm test script for Windows
+
+### Local Control — Phase 2A (2026-04-25)
+- [x] Pump found at 192.168.0.3 via dnsmasq DHCP (MAC `52:d4:f7:98:06:0a`)
+- [x] dnsmasq updated: redirect `ws-edge.nirvanahp.com` + `nirvana.iot-endpoint.com` → NAS
+- [x] iptables-legacy REDIRECT: `.3:443 → :8443` — persistent via `/usr/local/etc/rc.d/nirvana-iptables.sh`
+- [x] nirvana-proxy deployed: HTTPS/WSS proxy on :8443, `network_mode: host` (avoids DNS loop), forwards to real cloud via 8.8.8.8
+- [x] Proxy confirmed intercepting live traffic: `SetParameters` full state + `findQueuesByCardId` polling every ~3s
+- [x] Heartbeat monitor added to proxy: logs `pump went silent` / `pump reconnected` events with gap duration
+- [x] Phase 2B/2C not needed — no TLS pinning confirmed
+
+### Earlier work
+- [x] 2026-04-25 — Integration tests complete — mcp.test.js covers all 7 tools end-to-end
+- [x] 2026-04-22 — Deployed to Synology NAS via docker compose; live API connection verified
+- [x] 2026-04-22 — Created .env on NAS; credentials + card_id FC-0F-E7-98-06-0A confirmed
+- [x] 2026-04-19 — Unit tests for api.js — 12 passing tests
+- [x] 2026-04-19 — Implemented MCP server: src/index.js, src/api.js, src/auth.js
+- [x] 2026-04-19 — Downloaded + decompiled APK v2.9.6 — extracted full API
 
 ## 🚫 Blocked
 <!-- no current blockers -->
-<!-- log blockers here -->

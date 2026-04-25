@@ -13,6 +13,33 @@ const WS_TARGET      = 'wss://ws-edge.nirvanahp.com';     // WebSocket upgrades 
 const PORT = process.env.PROXY_PORT ? parseInt(process.env.PROXY_PORT) : 8443;
 const LOG_BODIES = process.env.LOG_BODIES !== 'false';
 
+// ─── Connection heartbeat tracker ───────────────────────────────────────────
+// The pump polls findQueuesByCardId every ~3s when healthy.
+// If we see no poll for SILENCE_MS we log a "pump went silent" event.
+// When polling resumes we log a "pump reconnected" event with the gap duration.
+const SILENCE_MS = 2 * 60 * 1000; // 2 minutes
+let lastPollAt = null;
+let silentLogged = false;
+
+function recordPoll() {
+  const now = Date.now();
+  if (silentLogged) {
+    const gapSec = lastPollAt ? Math.round((now - lastPollAt) / 1000) : null;
+    console.log('[heartbeat] pump reconnected', JSON.stringify({ ts: new Date().toISOString(), gap_sec: gapSec }));
+    silentLogged = false;
+  }
+  lastPollAt = now;
+}
+
+setInterval(() => {
+  if (!lastPollAt) return;
+  const silentSec = Math.round((Date.now() - lastPollAt) / 1000);
+  if (silentSec * 1000 >= SILENCE_MS && !silentLogged) {
+    console.log('[heartbeat] pump went silent', JSON.stringify({ ts: new Date().toISOString(), last_poll: new Date(lastPollAt).toISOString(), silent_sec: silentSec }));
+    silentLogged = true;
+  }
+}, 30_000); // check every 30s
+
 const app = express();
 
 // Buffer request body for logging, then restore it for the proxy
@@ -42,6 +69,8 @@ app.use((req, _res, next) => {
     catch { entry.body = req.rawBody.toString().slice(0, 500); }
   }
   console.log('[pump→proxy]', JSON.stringify(entry));
+  // Track heartbeat: any request from the pump counts as a poll
+  if (req.url.includes('findQueuesByCardId')) recordPoll();
   next();
 });
 
