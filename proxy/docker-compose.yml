@@ -4,12 +4,11 @@ services:
     container_name: nirvana-proxy
     restart: unless-stopped
     ports:
-      - "8444:8444"
+      - "8443:8443"
       - "8088:8088"
     environment:
       - LOG_BODIES=true
-      - PROXY_PORT=8444
-      - HTTP_MODE=true
+      - PROXY_PORT=8443
     logging:
       driver: "json-file"
       options:

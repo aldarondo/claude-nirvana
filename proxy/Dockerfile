@@ -18,7 +18,7 @@ RUN mkdir -p /certs && \
       -subj "/CN=nirvana.iot-endpoint.com" \
       -addext "subjectAltName=DNS:nirvana.iot-endpoint.com"
 
-EXPOSE 8444
+EXPOSE 8443
 EXPOSE 8088
 
 CMD ["node", "proxy.js"]
