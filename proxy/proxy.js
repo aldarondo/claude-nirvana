@@ -7,8 +7,9 @@ const require = createRequire(import.meta.url);
 const express = require('express');
 const { createProxyMiddleware, responseInterceptor } = require('http-proxy-middleware');
 
-const REST_TARGET = 'https://nirvana.iot-endpoint.com';
-const WS_TARGET   = 'wss://ws-edge.nirvanahp.com';
+const REST_TARGET    = 'https://nirvana.iot-endpoint.com';
+const WS_EDGE_TARGET = 'https://ws-edge.nirvanahp.com';   // REST calls to ws-edge
+const WS_TARGET      = 'wss://ws-edge.nirvanahp.com';     // WebSocket upgrades only
 const PORT = process.env.PROXY_PORT ? parseInt(process.env.PROXY_PORT) : 8443;
 const LOG_BODIES = process.env.LOG_BODIES !== 'false';
 
@@ -27,7 +28,7 @@ app.use((req, res, next) => {
 // Log every inbound request
 app.use((req, _res, next) => {
   const isWs = req.headers.upgrade?.toLowerCase() === 'websocket';
-  const target = isWs || req.headers.host?.includes('nirvanahp') ? 'ws-edge' : 'iot-endpoint';
+  const target = req.headers.host?.includes('nirvanahp') ? 'ws-edge' : 'iot-endpoint';
   const entry = {
     ts: new Date().toISOString(),
     src: req.socket.remoteAddress,
@@ -44,16 +45,14 @@ app.use((req, _res, next) => {
   next();
 });
 
-// WebSocket proxy for ws-edge.nirvanahp.com
+// WebSocket proxy — used ONLY for upgrade events, not regular HTTP
 const wsProxy = createProxyMiddleware({
   target: WS_TARGET,
   changeOrigin: true,
   ws: true,
   on: {
-    open: (proxySocket) => {
-      console.log('[ws] connection opened to', WS_TARGET);
-    },
-    message: (data, req) => {
+    open: () => console.log('[ws] connection opened to', WS_TARGET),
+    message: (data) => {
       try {
         const msg = data.toString();
         console.log('[ws→pump]', JSON.stringify({ ts: new Date().toISOString(), data: msg.slice(0, 500) }));
@@ -64,9 +63,10 @@ const wsProxy = createProxyMiddleware({
   },
 });
 
-// REST proxy for nirvana.iot-endpoint.com
+// REST proxy — handles ALL regular HTTP requests (both hostnames)
+// router() picks the correct upstream based on the Host header
 const restProxy = createProxyMiddleware({
-  target: REST_TARGET,
+  router: (req) => req.headers.host?.includes('nirvanahp') ? WS_EDGE_TARGET : REST_TARGET,
   changeOrigin: true,
   selfHandleResponse: true,
   on: {
@@ -83,6 +83,7 @@ const restProxy = createProxyMiddleware({
         method: req.method,
         path: req.url,
         status: proxyRes.statusCode,
+        host: req.headers.host,
       };
       if (LOG_BODIES && responseBuffer.length) {
         try { entry.body = JSON.parse(responseBuffer.toString()); }
@@ -98,13 +99,9 @@ const restProxy = createProxyMiddleware({
   },
 });
 
-// Route by Host header: ws-edge.nirvanahp.com → WS proxy, everything else → REST
-app.use((req, res, next) => {
-  if (req.headers.host?.includes('nirvanahp')) {
-    return wsProxy(req, res, next);
-  }
-  restProxy(req, res, next);
-});
+// All regular HTTP requests go through restProxy (correct target picked by router)
+// WebSocket upgrades are handled by the server 'upgrade' event below
+app.use((req, res, next) => restProxy(req, res, next));
 
 const certDir = process.env.CERT_DIR || '/certs';
 const key = fs.readFileSync(`${certDir}/server.key`);
@@ -112,7 +109,7 @@ const cert = fs.readFileSync(`${certDir}/server.crt`);
 
 const server = https.createServer({ key, cert }, app);
 
-// Upgrade WebSocket connections
+// WebSocket upgrade — only real WS handshakes reach here
 server.on('upgrade', (req, socket, head) => {
   console.log('[ws upgrade]', req.headers.host, req.url);
   wsProxy.upgrade(req, socket, head);
@@ -120,8 +117,9 @@ server.on('upgrade', (req, socket, head) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[nirvana-proxy] HTTPS/WSS proxy listening on :${PORT}`);
-  console.log(`[nirvana-proxy] REST → ${REST_TARGET}`);
-  console.log(`[nirvana-proxy] WS   → ${WS_TARGET}`);
+  console.log(`[nirvana-proxy] REST (iot-endpoint) → ${REST_TARGET}`);
+  console.log(`[nirvana-proxy] REST (ws-edge)       → ${WS_EDGE_TARGET}`);
+  console.log(`[nirvana-proxy] WS   (ws-edge)       → ${WS_TARGET}`);
   console.log(`[nirvana-proxy] LOG_BODIES=${LOG_BODIES}`);
 });
 
