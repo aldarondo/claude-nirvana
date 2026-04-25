@@ -33,3 +33,4 @@ Thumbs.db
 .idea/workspace.xml
 .githooks/
 apk-research/
+.claude/
