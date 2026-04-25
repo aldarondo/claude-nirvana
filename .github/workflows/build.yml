@@ -50,12 +50,15 @@ jobs:
           CF_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
-          # Push repo's docker-compose.yml to NAS so the deployed config stays in sync with git
-          sshpass -e scp \
-            -o StrictHostKeyChecking=no \
+          SSH_PROXY="sshpass -e ssh -o StrictHostKeyChecking=no -o ProxyCommand='cloudflared access ssh --hostname nas-ssh.aldarondo.family --id $CF_CLIENT_ID --secret $CF_CLIENT_SECRET'"
+          NAS_HOST="charles@nas-ssh.aldarondo.family"
+
+          # scp doesn't work through cloudflared — pipe the file via ssh stdin instead
+          # (sshpass -e reads the password from SSHPASS env var, so stdin is free for the file)
+          sshpass -e ssh -o StrictHostKeyChecking=no \
             -o "ProxyCommand=cloudflared access ssh --hostname nas-ssh.aldarondo.family --id $CF_CLIENT_ID --secret $CF_CLIENT_SECRET" \
-            docker-compose.yml \
-            charles@nas-ssh.aldarondo.family:/tmp/claude-nirvana-compose.yml
+            charles@nas-ssh.aldarondo.family \
+            "cat > /tmp/claude-nirvana-compose.yml" < docker-compose.yml
           sshpass -e ssh -o StrictHostKeyChecking=no \
             -o "ProxyCommand=cloudflared access ssh --hostname nas-ssh.aldarondo.family --id $CF_CLIENT_ID --secret $CF_CLIENT_SECRET" \
             charles@nas-ssh.aldarondo.family \
