@@ -1,0 +1,25 @@
+services:
+  nirvana-capture:
+    build: .
+    container_name: nirvana-capture
+    # Host networking required for ARP operations — container must see the same L2 as the pump
+    network_mode: host
+    # Full privileges needed for arpspoof, iptables, and raw packet capture
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    privileged: true
+    volumes:
+      - /volume1/docker/nirvana-capture/captures:/captures
+    environment:
+      - PUMP_IP=${PUMP_IP}
+      - ROUTER_IP=${ROUTER_IP:-192.168.0.1}
+      - IFACE=${IFACE:-eth0}
+    command: /app/capture.sh
+    stdin_open: true
+    tty: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
