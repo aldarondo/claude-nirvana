@@ -1,197 +1,175 @@
-# QA Audit Report — claude-nirvana
-**Date:** 2026-04-22
-
-## Executive Summary
-The claude-nirvana project is a small MCP server for controlling a Nirvana pool heater via reverse-engineered cloud API. Good baseline: 16 passing unit tests, clean structure, solid documentation. However, several issues were identified across security, test coverage, and code quality.
-
-**Stats:**
-- Source Code: 582 lines (4 files)
-- Tests: 224 lines (5 files, 16 passing + 9 todo)
-- Documentation: 172 lines (3 files)
+# QA Audit Report: claude-nirvana
+**Date:** 2026-04-25
+**Auditor:** Claude Code QA Analysis
+**Test Status:** 70 passing, 6 skipped (api.live requires credentials)
+**Overall Rating:** 6/10 — Functional but requires fixes for production readiness
 
 ---
 
 ## 1. BUGS
 
-### 1.1 Auth Session Not Cleared After Refresh Failure [MAJOR]
-**Location:** `src/auth.js:37-42`
+### Critical
 
-If `refreshSession()` throws (not returns null), the error is caught but execution silently continues to `signIn()`, potentially falling back to password auth on ANY error — including network issues, invalid credentials, Cognito API issues. All failures are treated the same.
+**BUG #1: Port Configuration Mismatch (Deployment Risk)**
+- **Severity:** CRITICAL
+- **Location:** `src/index.js:219`, `docker-compose.yml:15`, `.env.example:8`, `README.md:54,65`
+- **Issue:**
+  - Code default: `8769` (`const MCP_PORT = parseInt(process.env.MCP_PORT || '8769', 10)`)
+  - `.env.example`: `MCP_PORT=8769`
+  - `docker-compose.yml`: Default is `8774` (`MCP_PORT=${MCP_PORT:-8774}`)
+  - `README.md`: Documents `8774` as the port
+  - `Dockerfile`: Exposes `8769`
+- **Impact:** Docker deployment will bind to port 8774 while code defaults to 8769.
+- **Fix:** Consolidate to 8774 everywhere.
 
-**Recommendation:** Log the error before swallowing; distinguish between recoverable (network) and permanent (credentials) failures.
+### Major
 
----
+**BUG #2: Missing Jest Import in logger.test.js**
+- **Severity:** MAJOR
+- **Location:** `tests/unit/logger.test.js:17,26`
+- **Issue:** `beforeEach()`, `afterAll()` used without importing from jest globals.
+- **Fix:** Add: `import { describe, test, expect, beforeEach, afterAll } from '@jest/globals';`
 
-### 1.2 Temperature Validation Missing Min/Max Bounds [MINOR]
-**Location:** `src/index.js:145` & `src/api.js:114`
-
-The `set_temperature` tool accepts any numeric value with zero bounds validation. A user could set the pool temperature to `-100°C` or `500°F` with no warning, sending malformed API requests to the backend.
-
-**Recommendation:** Add temperature range validation (e.g., 10-50°C / 50-122°F).
-
----
-
-### 1.3 Log Rotation Race Condition [MINOR]
-**Location:** `src/logger.js:14-23`
-
-If the log file is deleted between `fs.existsSync()` and `fs.renameSync()`, an uncaught error is thrown. The try-catch catches it, but the error is written to stderr only — not captured or surfaced.
-
-**Recommendation:** Wrap rotation in try-catch and explicitly log failures.
+**BUG #3: Haste Module Naming Collision**
+- **Severity:** MAJOR
+- **Location:** `.claude/worktrees/serene-carson-e2db37/`
+- **Issue:** Jest finds duplicate `package.json` in worktree, causing non-deterministic test behavior.
+- **Fix:** Add `.claude/worktrees/*/` to jest testPathIgnorePatterns.
 
 ---
 
 ## 2. TEST COVERAGE
 
-### 2.1 Integration Tests Not Implemented [CRITICAL]
-**Location:** `tests/integration/mcp.test.js` & `tests/integration/placeholder.test.js`
+### Coverage Summary
 
-Both integration test files contain only `.test.todo()` stubs — 0 real tests. Credentials were confirmed as of 2026-04-22 but integration tests were never written.
+| File | Statements | Branches | Functions | Lines | Status |
+|------|-----------|----------|-----------|-------|--------|
+| src/api.js | 86.79% | 94.11% | 80% | 86% | ✅ Good |
+| src/auth.js | 11.76% | 0% | 0% | 12.9% | ❌ CRITICAL |
+| src/index.js | 61.25% | 57.5% | 50% | 66.66% | ⚠️ Major gaps |
+| src/logger.js | 81.25% | 68.75% | 100% | 85.71% | ✅ Good |
+| **Overall** | **67.58%** | **72.56%** | **63.49%** | **70.76%** | ⚠️ Below 80% |
 
-**Missing:**
-- Real MCP server endpoint validation
-- Tool invocation with live auth
-- Error handling when credentials are invalid
-- SSE transport connectivity
+**COVERAGE #1: auth.js — Zero Coverage (CRITICAL)**
+- `getAccessToken()`, `refreshSession()`, `signIn()` never tested; session caching/expiry untested.
+- **Fix:** Create `tests/unit/auth.test.js`
 
----
+**COVERAGE #2: index.js SSE Transport Code Untested (MAJOR)**
+- Express server setup, `/mcp` POST handler, error paths — all uncovered.
+- **Fix:** Add integration test for SSE transport
 
-### 2.2 API Client Tests Miss Edge Cases [MAJOR]
-**Location:** `tests/unit/api.test.js`
+**COVERAGE #3: Unknown Tool Error Path (MAJOR)**
+- `src/index.js:200` — default switch case never triggered in tests.
+- **Fix:** Add test case for unknown tool name
 
-**Missing coverage:**
-- Network errors (Axios timeout, 500 errors, connection refused)
-- Malformed JSON or missing fields in API responses
-- Concurrent auth token scenarios
-- Incorrect mode casing validation
+**COVERAGE #4: logger.js Rotation Edge Cases (MINOR)**
+- Rotation error handling, `ensureDir()` errors, file write errors untested.
 
----
-
-### 2.3 Logger Test Cleanup Missing [MINOR]
-**Location:** `tests/unit/logger.test.js:17`
-
-No `beforeEach()` to reset log state between tests — tests may interfere with each other if run out of order.
+**COVERAGE #5: api.live.test.js — 6 Tests Always Skipped (MINOR)**
+- Credentials not available in CI; skip reason not documented.
 
 ---
 
 ## 3. CODE QUALITY
 
-### 3.1 Silent Error Swallowing in Auth Cache [MAJOR]
-**Location:** `src/auth.js:40`
+**QUALITY #1: Global Session State in auth.js (MAJOR)**
+- `src/auth.js:20` — `let cachedSession = null;` module-level mutable state. `clearSession()` exported but never called.
 
-`catch (_)` discards the rejection reason entirely, making auth failures opaque to debugging. All auth errors (network, credentials, Cognito API) are silently converted to a password-auth retry.
+**QUALITY #2: No Input Validation on card_id (MAJOR)**
+- `src/index.js:143,154,162,171,179,186,193` — only checks truthiness, not format.
+- **Fix:** Validate non-empty string; check format if known.
 
----
+**QUALITY #3: No Retry for Axios Timeout (MAJOR)**
+- `src/api.js:46` — 15s timeout but no retry logic.
+- **Fix:** Add retry wrapper with exponential backoff.
 
-### 3.2 Express App Not Isolated for Testing [MAJOR]
-**Location:** `src/index.js:198-223`
+**QUALITY #4: Incomplete Temperature Validation (MAJOR)**
+- `src/index.js:164` — missing NaN/Infinity/range checks.
+- **Fix:** `if (!Number.isFinite(temperature) || temperature < 1 || temperature > 110)`
 
-SSE transport is tightly coupled to startup code. The Express app and transport map cannot be unit-tested in isolation. Integration tests that try to start the server in SSE mode will bind port 8769 and hang.
+**QUALITY #5: No Structured Error Codes (MODERATE)**
+- `src/index.js:205` — callers can't distinguish auth failure vs network failure vs invalid input.
 
-**Recommendation:** Extract SSE setup into a factory function returning `{ server, app }`.
-
----
-
-### 3.3 No Input Sanitization for API Parameters [MINOR]
-**Location:** `src/api.js` & `src/index.js`
-
-`card_id` not validated as a string format; temperature could be `Infinity` or `NaN`; mode strings checked for membership but not sanitized.
-
----
-
-### 3.4 MCP Error Responses Expose Internal Details [MINOR]
-**Location:** `src/index.js:186-188`
-
-Raw Cognito error messages (e.g., "User does not exist in the User Pool") are returned directly to Claude, enabling account enumeration.
+**QUALITY #6: mode.toUpperCase() Without Null Check (MINOR)**
+- `src/api.js:128` — throws before validation error if mode is null/undefined.
 
 ---
 
 ## 4. DOCUMENTATION
 
-### 4.1 README Missing Critical Setup Details [MAJOR]
-**Location:** `README.md`
+**DOCS #1: No Tool API Reference (MAJOR)**
+- No documented input/output schemas, examples, or error responses for each tool.
+- **Fix:** Add Tool Reference section to README.md
 
-**Missing:**
-- Troubleshooting section
-- Sample API response output
-- Supported temperature ranges
-- Expected Docker log output
-- Credentials security warning
+**DOCS #2: Port Contradiction in README (MAJOR)**
+- README says 8774; `.env.example` says 8769. (See BUG #1)
 
----
+**DOCS #3: Incomplete Troubleshooting Guide (MODERATE)**
+- No Docker deployment failure section, port conflict guidance, or log examples.
 
-### 4.2 ROADMAP.md References Non-Existent File [MINOR]
-**Location:** `ROADMAP.md:12`
+**DOCS #4: No Architecture Documentation (MODERATE)**
+- No component diagram, request flow, or explanation of auth caching/transport modes.
 
-References `apk-research/FINDINGS.md` which is in `.gitignore` — missing after a fresh clone.
-
----
-
-### 4.3 Incomplete Tool Documentation [MINOR]
-**Location:** `src/index.js:59-69`
-
-`set_temperature` description doesn't explain how to determine which temperature unit is active (requires calling `get_status` first).
+**DOCS #5: Security Section Too Brief (MODERATE)**
+- SSE endpoint auth described as "in active development" with no future plan documented.
 
 ---
 
 ## 5. ORGANIZATION
 
-### 5.1 Placeholder Test Files [MINOR]
-**Location:** `tests/unit/placeholder.test.js` & `tests/integration/placeholder.test.js`
+**ORG #1: Haste Module Collision from Worktree (MAJOR)**
+- `.claude/worktrees/serene-carson-e2db37/` causing Jest collision warnings. (See BUG #3)
 
-Two stub files with only `test.todo()` calls clutter the test suite and suggest incomplete state.
+**ORG #2: APK Research Artifacts in Version Control (MINOR)**
+- `./apk-research/` is `.gitignore`d but directory still present, bloating repo.
+- **Fix:** `git rm -r --cached apk-research/`
 
----
-
-### 5.2 Environment Variable Documentation Scattered [MINOR]
-
-Env vars documented in three places: `README.md`, `.env.example`, and hardcoded defaults in `src/index.js`. No single source of truth.
+**ORG #3: Inconsistent Test File Naming (MINOR)**
+- `api.live.test.js` naming non-standard; no documented test organization convention.
 
 ---
 
 ## 6. SECURITY
 
-### 6.1 SSE Transport Has No Authentication [CRITICAL]
-**Location:** `src/index.js:204-209`
+**SEC #1: Plaintext Credentials in .env (CRITICAL)**
+- Nirvana username/password in plaintext; no credential rotation documentation.
 
-The `/sse` endpoint accepts any connection without validating caller identity. Any client on the LAN can connect and immediately gain full control of the heat pump.
+**SEC #2: Unauthenticated SSE Endpoint (CRITICAL)**
+- `src/index.js:225-234` — `/mcp` endpoint has no auth, no rate limiting.
+- Anyone on the LAN can control the heater (safety risk).
+- **Fix:** Implement API key auth and rate limiting before production.
 
-**Recommendation:** Add Bearer token / API key validation; whitelist IPs or restrict to localhost.
+**SEC #3: Sensitive Information in Logs (MAJOR)**
+- `src/logger.js:64-79` — scrubbing only in `logError()`, not in `logToolCall()` or `logStatus()`.
+- `card_id` logged in plaintext (line 48).
+- **Fix:** Apply scrubbing consistently; hash or omit card_id from logs.
 
----
+**SEC #4: No Request Body Validation in Express POST (MAJOR)**
+- `src/index.js:225` — no body size limit; DoS vector.
+- **Fix:** `express.json({ limit: '1mb' })` + body format check.
 
-### 6.2 Potential Credential Exposure in Logs [CRITICAL]
-**Location:** `src/logger.js` (affects all tools)
+**SEC #5: Weak Temperature Range Validation (MODERATE)**
+- `src/api.js:115` — doesn't validate against device's actual temp unit; could allow unsafe values.
 
-Tool args and results are logged without credential scrubbing. If Cognito returns credentials in an error message, they would be written to `/app/data/nirvana.log` — a Docker volume that may be backed up unencrypted.
-
-**Recommendation:** Implement credential scrubbing in logger; never log full parameter objects.
-
----
-
-### 6.3 No CORS or Request Origin Validation [MAJOR]
-**Location:** `src/index.js:199-200`
-
-No CORS headers or origin validation. A malicious website could make cross-origin requests from the browser to the MCP server and control the heater (CSRF).
-
----
-
-### 6.4 Dependency Versions Not Pinned [MAJOR]
-**Location:** `package.json:25-30`
-
-All dependencies use caret ranges (`^1.x.x`), allowing automatic minor/patch updates that could introduce breaking changes or security vulnerabilities.
+**SEC #6: No Token Expiry Clock Validation (MODERATE)**
+- `src/auth.js:31-34` — expiry from JWT not validated against server time; stale tokens possible.
 
 ---
 
-## Summary
+## Issues by Severity
 
 | Severity | Count |
 |----------|-------|
-| Critical | 4 |
-| Major | 10 |
-| Minor | 11 |
+| CRITICAL | 4 |
+| MAJOR | 9 |
+| MODERATE | 6 |
+| MINOR | 5 |
+| **Total** | **24** |
 
-## Top 3 Most Important Issues
+---
 
-1. **SSE endpoint has no authentication** — any LAN client can control the heater
-2. **Zero integration tests** — no end-to-end verification the server actually works
-3. **Potential credential exposure in logs** — Cognito errors could leak credentials to log file
+## Top 3 Most Important
+
+1. **Port mismatch (BUG #1)** — Docker deploy silently uses wrong port; `src/index.js:219` + `docker-compose.yml:15`
+2. **Zero auth.js coverage (COVERAGE #1)** — Authentication code completely untested; `src/auth.js`
+3. **Unauthenticated SSE endpoint (SEC #2)** — Anyone on LAN can control the heater; `src/index.js:225-234`
