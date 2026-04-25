@@ -54,7 +54,7 @@ jobs:
           sshpass -e ssh -o StrictHostKeyChecking=no \
             -o "ProxyCommand=cloudflared access ssh --hostname nas-ssh.aldarondo.family --id $CF_CLIENT_ID --secret $CF_CLIENT_SECRET" \
             charles@nas-ssh.aldarondo.family \
-            "sudo mkdir -p /volume1/docker/nirvana-proxy \
-             && sudo cp /tmp/nirvana-proxy-compose.yml /volume1/docker/nirvana-proxy/docker-compose.yml \
-             && sudo /usr/local/bin/docker compose -f /volume1/docker/nirvana-proxy/docker-compose.yml pull \
-             && sudo /usr/local/bin/docker compose -f /volume1/docker/nirvana-proxy/docker-compose.yml up -d"
+            "echo '$SSHPASS' | sudo -S mkdir -p /volume1/docker/nirvana-proxy \
+             && echo '$SSHPASS' | sudo -S cp /tmp/nirvana-proxy-compose.yml /volume1/docker/nirvana-proxy/docker-compose.yml \
+             && echo '$SSHPASS' | sudo -S /usr/local/bin/docker compose -f /volume1/docker/nirvana-proxy/docker-compose.yml pull \
+             && echo '$SSHPASS' | sudo -S /usr/local/bin/docker compose -f /volume1/docker/nirvana-proxy/docker-compose.yml up -d"
