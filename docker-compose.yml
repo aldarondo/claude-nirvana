@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./data:/app/data
-      - ./logs:/app/logs
+      - /volume1/docker/claude-nirvana/logs:/app/logs
     ports:
       - "8774:8774"
     environment:
