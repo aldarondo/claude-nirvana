@@ -16,7 +16,7 @@ RUN mkdir -p /certs && \
       -keyout /certs/server.key \
       -out /certs/server.crt \
       -subj "/CN=nirvana.iot-endpoint.com" \
-      -addext "subjectAltName=DNS:nirvana.iot-endpoint.com"
+      -addext "subjectAltName=DNS:nirvana.iot-endpoint.com,DNS:ws-edge.nirvanahp.com"
 
 EXPOSE 8443
 EXPOSE 8088
