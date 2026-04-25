@@ -7,6 +7,6 @@ RUN npm ci --omit=dev
 
 COPY src/ ./src/
 
-EXPOSE 8769
+EXPOSE 8774
 
 CMD ["node", "src/index.js"]

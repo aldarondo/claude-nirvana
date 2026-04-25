@@ -30,7 +30,7 @@ export async function getAccessToken(username, password) {
   if (cachedSession) {
     const expiry = cachedSession.getAccessToken().getExpiration();
     const now = Math.round(Date.now() / 1000);
-    if (expiry - 60 > now) {
+    if (expiry - 300 > now) {
       return cachedSession.getAccessToken().getJwtToken();
     }
     // Try to refresh

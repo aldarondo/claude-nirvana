@@ -5,13 +5,15 @@
 
 ### Local Control — Phase 1: Traffic Recon
 See full plan: [LOCAL_CONTROL_PLAN.md](LOCAL_CONTROL_PLAN.md)
-- [x] `[Code]` 2026-04-23 — Confirmed pump MAC `FC:0F:E7:98:06:0A` is NOT on NAS subnet (192.168.0.0/24) — on separate IoT VLAN. Need Cox Panoramic app to find pump IP and subnet.
+- [x] `[Code]` 2026-04-25 — Pump found at **192.168.0.122** (network MAC `52:d4:f7:98:06:0a`). On same subnet as NAS — ARP spoofing is feasible. No inbound TCP ports open (outbound-only device). Earlier "IoT VLAN" assessment was wrong.
 - [x] `[Code]` 2026-04-23 — Built `nirvana-capture` Docker container (`capture/Dockerfile`, `capture/docker-compose.yml`)
 - [x] `[Code]` 2026-04-23 — Wrote `capture/capture.sh` and `capture/cleanup.sh`
-- [ ] `[Human]` Find pump IP + subnet in Cox Panoramic app (MAC: FC:0F:E7:98:06:0A). **Critical:** NAS must be on same L2 as pump for ARP spoofing — if pump is on IoT VLAN, check if NAS can be added to that VLAN.
-- [ ] `[Human]` Deploy capture container: `PUMP_IP=<ip> ROUTER_IP=<gw> IFACE=<iface> docker compose up` in `capture/` on NAS
-- [ ] `[Human]` Run 30-min capture; export pcap + mitmproxy flows from `/volume1/docker/nirvana-capture/captures/`
-- [ ] `[Code]` Analyze results → decide Phase 2 path (proxy / IoT direct / Modbus)
+- [x] `[Human]` 2026-04-25 — Deploy capture container and run pcap
+- [x] `[Code]` 2026-04-25 — Analyzed pcap: pump uses HTTPS REST to `nirvana.iot-endpoint.com` (uvicorn/ALB), no MQTT, no IoT Core, no TLS pinning → Phase 2A
+- [x] `[Human]` 2026-04-25 — Cox DHCP changed to .4–.122 (excludes .2 JuiceBox, .3 pump)
+- [x] `[Code]` 2026-04-25 — juicebox dnsmasq updated: reserve .3 for pump MAC, redirect `nirvana.iot-endpoint.com` → NAS
+- [ ] `[Human]` Reboot pump to trigger DHCP race → should land on .3 with NAS as DNS
+- [ ] `[Code]` Phase 2A proxy: `proxy/` — HTTPS proxy on :443, logs all pump API calls, forwards to real cloud (build-proxy.yml → ghcr.io/aldarondo/nirvana-proxy)
 
 ## 🔲 Backlog
 
@@ -26,9 +28,9 @@ See full plan: [LOCAL_CONTROL_PLAN.md](LOCAL_CONTROL_PLAN.md)
 - [x] `[Code]` Implemented MCP server: src/index.js, src/api.js, src/auth.js (2026-04-19)
 
 ### Build & Infrastructure
-- [x] `[Code]` 2026-04-22 — Add SSE transport mode (port 8769) for NAS/coordinator use — `MCP_TRANSPORT=sse` env var
-- [ ] `[Code]` Add GHCR build-push workflow — migrate container from `node:20-alpine` to a versioned GHCR image (`ghcr.io/aldarondo/...`) with GitHub Actions auto-deploy
-- [ ] `[Code]` Add weekly scheduled rebuild — GitHub Actions `schedule: cron` to repull and push a fresh image every week, picking up base-image security patches
+- [x] `[Code]` 2026-04-22 — Add SSE transport mode (port 8774) for NAS/coordinator use — `MCP_TRANSPORT=sse` env var
+- [x] `[Code]` 2026-04-25 — Add GHCR build-push workflow — test → build → push to `ghcr.io/aldarondo/claude-nirvana:latest` + SHA tag; SSH key auth via Cloudflare tunnel (replaces broken sshpass approach)
+- [x] `[Code]` 2026-04-25 — Weekly scheduled rebuild — `schedule: cron: "0 8 * * 0"` in build.yml picks up base-image security patches every Sunday
 
 ### Local Control — Phase 2 (pending Phase 1 results)
 - [ ] `[Code]` Phase 2A — Local proxy server (if no TLS pinning)
@@ -39,14 +41,12 @@ See full plan: [LOCAL_CONTROL_PLAN.md](LOCAL_CONTROL_PLAN.md)
 ### Next steps
 - [x] `[Human]` 2026-04-22 — Created .env on NAS; credentials + card_id FC-0F-E7-98-06-0A confirmed
 - [x] `[Code]` 2026-04-19 — Write unit tests (tests/unit/api.test.js stubs in place)
-- [ ] `[Code]` Write integration tests once credentials confirmed working
+- [x] `[Code]` 2026-04-25 — Integration tests complete — mcp.test.js covers all 7 tools end-to-end via InMemoryTransport; auth.test.js covers token caching, refresh, and sign-in failure paths
 - [x] `[Code]` 2026-04-22 — Deployed to Synology NAS via docker compose; live API connection verified
 
 ## ✅ Completed
 - [x] 2026-04-19 — Completed: Unit tests for api.js — 12 passing tests covering listDevices, getParameters, setTemperature/HeatingMode/FanMode validation, and formatStatus; moved formatStatus to api.js (exported); fixed npm test script for Windows
 
 ## 🚫 Blocked
-- ❌ [docker-monitor:deploy-failed] GitHub Actions deploy failed (run #24920102711) — https://github.com/aldarondo/claude-nirvana/actions/runs/24920102711 — 2026-04-25 08:00 UTC
-- ❌ [docker-monitor:no-ghcr-image] Container `claude-nirvana` uses `node:20-alpine` — migrate to `ghcr.io/aldarondo/...` with a GitHub Actions build-push workflow — 2026-04-23 08:00 UTC
-- ❌ Phase 1 capture blocked: pump (MAC FC:0F:E7:98:06:0A) is on a separate IoT VLAN — not reachable from NAS subnet 192.168.0.0/24. ARP spoofing requires same L2 segment. **Charles must:** (1) find pump IP/subnet in Cox Panoramic app, (2) determine if NAS can join that VLAN, or use a device already on the IoT network as the capture host.
+<!-- no current blockers -->
 <!-- log blockers here -->

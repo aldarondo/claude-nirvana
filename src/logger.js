@@ -38,28 +38,6 @@ function write(entry) {
   }
 }
 
-export function logToolCall(tool, args, outcome) {
-  write({ event: 'tool_call', tool, args, outcome });
-}
-
-export function logStatus(cardId, params) {
-  write({
-    event: 'status_snapshot',
-    card_id: cardId,
-    water_temp: params.WATER_TEMPERATURE,
-    outdoor_temp: params.OUTDOOR_TEMP,
-    heat_mode: params.HEAT_MODE,
-    heating: params.HEATING,
-    fan_mode: params.FAN_MODE,
-    target_pool: params.DESIRED_POOL_TEMPERATURE,
-    target_spa: params.DESIRED_SPA_TEMPERATURE,
-    temp_unit: params.TEMPERATURE_UNIT,
-    last_connect: params.CARD_LAST_CONNECT,
-    alerts: params.ALERT_LIST ?? [],
-    errors: params.ERROR_LIST ?? [],
-  });
-}
-
 // Scrub patterns that might contain account details from Cognito error messages
 const SCRUB_PATTERNS = [
   { pattern: /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, replacement: '[email]' },
@@ -72,6 +50,36 @@ function scrubMessage(message) {
     scrubbed = scrubbed.replace(pattern, replacement);
   }
   return scrubbed;
+}
+
+function hashId(id) {
+  if (!id) return null;
+  let h = 0;
+  for (let i = 0; i < id.length; i++) { h = (Math.imul(31, h) + id.charCodeAt(i)) | 0; }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+
+export function logToolCall(tool, args, outcome) {
+  const safeArgs = args?.card_id ? { ...args, card_id: hashId(args.card_id) } : args;
+  write({ event: 'tool_call', tool, args: safeArgs, outcome });
+}
+
+export function logStatus(cardId, params) {
+  write({
+    event: 'status_snapshot',
+    card_id: hashId(cardId),
+    water_temp: params.WATER_TEMPERATURE,
+    outdoor_temp: params.OUTDOOR_TEMP,
+    heat_mode: params.HEAT_MODE,
+    heating: params.HEATING,
+    fan_mode: params.FAN_MODE,
+    target_pool: params.DESIRED_POOL_TEMPERATURE,
+    target_spa: params.DESIRED_SPA_TEMPERATURE,
+    temp_unit: params.TEMPERATURE_UNIT,
+    last_connect: params.CARD_LAST_CONNECT,
+    alerts: params.ALERT_LIST ?? [],
+    errors: params.ERROR_LIST ?? [],
+  });
 }
 
 export function logError(tool, message) {

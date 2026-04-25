@@ -46,6 +46,12 @@ function safeErrorMessage(message) {
   return message;
 }
 
+function validateCardId(cardId) {
+  if (!cardId || typeof cardId !== 'string' || cardId.trim().length === 0) {
+    throw new Error('card_id required (pass as argument or set NIRVANA_CARD_ID env var)');
+  }
+}
+
 // ─── Server factory ──────────────────────────────────────────────────────────
 
 export function createServer() {
@@ -151,7 +157,7 @@ export function createServer() {
         }
 
         case 'get_status': {
-          if (!cardId) throw new Error('card_id required (pass as argument or set NIRVANA_CARD_ID env var)');
+          validateCardId(cardId);
           const params = await getParameters(cardId);
           logStatus(cardId, params);
           const status = formatStatus(params);
@@ -159,16 +165,17 @@ export function createServer() {
         }
 
         case 'set_temperature': {
-          if (!cardId) throw new Error('card_id required');
+          validateCardId(cardId);
           const { temperature, mode } = args;
-          if (typeof temperature !== 'number') throw new Error('temperature must be a number');
+          if (!Number.isFinite(temperature)) throw new Error('temperature must be a finite number');
+          if (temperature < 1 || temperature > 110) throw new Error('temperature out of valid range (°C: 1–50, °F: 34–110)');
           const result = await setTemperature(cardId, mode, temperature);
           logToolCall('set_temperature', { card_id: cardId, mode, temperature }, result);
           return { content: [{ type: 'text', text: `✅ ${mode.toUpperCase()} setpoint updated to ${temperature}°\n${JSON.stringify(result)}` }] };
         }
 
         case 'set_mode': {
-          if (!cardId) throw new Error('card_id required');
+          validateCardId(cardId);
           const result = await setHeatingMode(cardId, args.mode);
           logToolCall('set_mode', { card_id: cardId, mode: args.mode }, result);
           const label = args.mode === 'OFF' ? '🔴 Heat pump turned OFF' : `🟢 Heat pump set to ${args.mode} mode`;
@@ -176,21 +183,21 @@ export function createServer() {
         }
 
         case 'set_fan_mode': {
-          if (!cardId) throw new Error('card_id required');
+          validateCardId(cardId);
           const result = await setFanMode(cardId, args.mode);
           logToolCall('set_fan_mode', { card_id: cardId, mode: args.mode }, result);
           return { content: [{ type: 'text', text: `✅ Fan mode set to ${args.mode}\n${JSON.stringify(result)}` }] };
         }
 
         case 'get_history': {
-          if (!cardId) throw new Error('card_id required');
+          validateCardId(cardId);
           const history = await getHistory(cardId);
           logToolCall('get_history', { card_id: cardId }, { entries: history?.length ?? 0 });
           return { content: [{ type: 'text', text: JSON.stringify(history, null, 2) }] };
         }
 
         case 'reset_runtime': {
-          if (!cardId) throw new Error('card_id required');
+          validateCardId(cardId);
           const result = await resetRunningTime(cardId);
           logToolCall('reset_runtime', { card_id: cardId }, result);
           return { content: [{ type: 'text', text: `✅ Running time reset\n${JSON.stringify(result)}` }] };
@@ -216,11 +223,23 @@ export function createServer() {
 if (!process.env.MCP_TEST_MODE) {
   const MCP_TRANSPORT = process.env.MCP_TRANSPORT || 'stdio';
   const MCP_HOST = process.env.MCP_HOST || '0.0.0.0';
-  const MCP_PORT = parseInt(process.env.MCP_PORT || '8769', 10);
+  const MCP_PORT = parseInt(process.env.MCP_PORT || '8774', 10);
 
   if (MCP_TRANSPORT === 'sse') {
+    const MCP_API_KEY = process.env.MCP_API_KEY;
+    if (!MCP_API_KEY) {
+      console.error('WARNING: MCP_API_KEY is not set — SSE endpoint has no authentication');
+    }
+
     const app = express();
-    app.use(express.json());
+    app.use(express.json({ limit: '1mb' }));
+
+    app.use('/mcp', (req, res, next) => {
+      if (!MCP_API_KEY) return next();
+      const provided = req.headers['x-api-key'] || req.headers['authorization']?.replace(/^Bearer\s+/i, '');
+      if (provided !== MCP_API_KEY) return res.status(401).json({ error: 'Unauthorized' });
+      next();
+    });
 
     app.post('/mcp', async (req, res) => {
       const server = createServer();

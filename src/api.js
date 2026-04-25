@@ -125,7 +125,7 @@ export async function setTemperature(cardId, mode, value) {
  */
 export async function setHeatingMode(cardId, mode) {
   const valid = Object.values(HEAT_MODE);
-  if (!valid.includes(mode.toUpperCase())) {
+  if (!mode || typeof mode !== 'string' || !valid.includes(mode.toUpperCase())) {
     throw new Error(`mode must be one of: ${valid.join(', ')}`);
   }
   const c = await client();
@@ -143,7 +143,7 @@ export async function setHeatingMode(cardId, mode) {
  */
 export async function setFanMode(cardId, mode) {
   const valid = Object.values(FAN_MODE);
-  if (!valid.includes(mode.toUpperCase())) {
+  if (!mode || typeof mode !== 'string' || !valid.includes(mode.toUpperCase())) {
     throw new Error(`mode must be one of: ${valid.join(', ')}`);
   }
   const c = await client();

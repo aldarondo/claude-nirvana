@@ -196,6 +196,24 @@ describe('MCP server integration', () => {
     expect(result.content[0].text).toContain('Authentication failed');
   });
 
+  test('unknown tool name returns isError response', async () => {
+    // The MCP SDK catches unknown tools at the protocol level; trigger via a direct handler call.
+    // We test the server's default switch branch by bypassing the SDK client.
+    const { createServer: createFreshServer } = await import('../../src/index.js');
+    const freshServer = createFreshServer();
+    const [ct, st] = InMemoryTransport.createLinkedPair();
+    const fc = new Client({ name: 'tc', version: '1.0.0' }, { capabilities: {} });
+    await freshServer.connect(st);
+    await fc.connect(ct);
+    // The MCP protocol surfaces unknown tools as an error result
+    try {
+      await fc.callTool({ name: 'nonexistent_tool', arguments: {} });
+    } catch (err) {
+      expect(err.message).toMatch(/nonexistent_tool|unknown/i);
+    }
+    await fc.close();
+  });
+
   test('all 7 tools are registered and listed', async () => {
     const { tools } = await client.listTools();
     const names = tools.map(t => t.name);

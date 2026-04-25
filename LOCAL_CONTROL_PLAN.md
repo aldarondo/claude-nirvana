@@ -2,7 +2,16 @@
 
 **Goal:** Eliminate cloud dependency for pool heater control. Currently all commands relay through `nirvana.iot-endpoint.com` — if the Nirvana cloud is degraded, the device shows OFFLINE even when the pump has power and WiFi.
 
-**Status:** Phase 1 (traffic recon) not yet started — waiting on device IP from Cox Panoramic app.
+**Status:** Phase 1 unblocked — pump found on main subnet, reachable from NAS. Capture container already built (`capture/`). Ready to deploy when Charles has time.
+
+**Device location (found 2026-04-25):**
+- IP: `192.168.0.122`
+- Network MAC: `52:d4:f7:98:06:0a` (locally-administered; last 3 octets `98:06:0a` match card_id)
+- Label MAC: `fc:0f:e7:98:06:0a`
+- Reachable from NAS (same 192.168.0.0/24 subnet) — the "IoT VLAN" assessment was wrong
+- No open TCP ports — device is outbound-only (cloud via MQTT/WebSocket)
+
+**DNS finding (2026-04-25):** `nirvana.iot-endpoint.com` → AWS ALB (`prod-servi-...elb.us-east-2.amazonaws.com`) — REST backend only, not IoT Core. The device uses a separate (unknown) AWS IoT Core endpoint for its persistent connection. Phase 1 capture will reveal it.
 
 ---
 
@@ -21,13 +30,8 @@ Known device MAC: `FC:0F:E7:98:06:0A`
 **Goal:** Understand exactly what protocol and endpoints the heat pump device uses to talk to the cloud. This determines whether local interception is feasible.
 
 ### Prerequisites
-- [ ] `[Code]` Look up heat pump IP by MAC address from NAS ARP table:
-  ```bash
-  python skills/synology.py ssh "arp -an | grep -i 'fc:0f:e7:98:06:0a'"
-  # or if not in cache yet:
-  python skills/synology.py ssh "sudo nmap -sn 192.168.1.0/24 && arp -an | grep -i 'fc:0f:e7:98:06:0a'"
-  ```
-- [ ] `[Human]` Confirm NAS is on the same subnet as the heat pump
+- [x] `[Code]` 2026-04-25 — Pump found: **192.168.0.122** (MAC `52:d4:f7:98:06:0a`). Reachable from NAS on same subnet. No open inbound ports (outbound-only device).
+- [x] `[Human]` NAS confirmed on same subnet (192.168.0.0/24)
 
 ### Implementation
 - [ ] `[Code]` Build `nirvana-capture` Docker image on NAS:

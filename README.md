@@ -13,7 +13,7 @@ MCP server for managing the Nirvana pool heat pump at home, deployed as a Docker
 ## Tech Stack
 | Layer | Technology |
 |---|---|
-| MCP Server | Node.js 20, MCP SDK |
+| MCP Server | Node.js 22, MCP SDK |
 | Auth | AWS Cognito (`amazon-cognito-identity-js`) |
 | HTTP Client | Axios |
 | API | Nirvana cloud (`https://nirvana.iot-endpoint.com`) |
@@ -51,7 +51,7 @@ Set `MCP_TRANSPORT=sse` in `.env`, then:
 docker compose up -d
 docker compose logs -f
 ```
-The server listens on port **8774** (`http://nas:8774/sse`).
+The server listens on port **8774** (`http://nas:8774/mcp`).
 
 ### Environment variables
 
@@ -63,6 +63,7 @@ The server listens on port **8774** (`http://nas:8774/sse`).
 | `MCP_TRANSPORT` | `stdio` (default) or `sse` |
 | `MCP_HOST` | SSE bind address (default `0.0.0.0`) |
 | `MCP_PORT` | SSE port (default `8774`) |
+| `MCP_API_KEY` | Optional API key for SSE endpoint — set to require `X-API-Key` or `Authorization: Bearer` header on all `/mcp` requests |
 
 ## MCP Tools
 
@@ -75,6 +76,47 @@ The server listens on port **8774** (`http://nas:8774/sse`).
 | `set_fan_mode` | `ECO` / `QUIET` / `SMART` / `BOOST` |
 | `get_history` | Alert and error history |
 | `reset_runtime` | Reset the running time counter |
+
+### Tool Reference
+
+#### `list_devices`
+**Input:** `{}` (no arguments required)
+**Output:** JSON array of device objects, each containing `card_id` and device metadata.
+**Errors:** Auth failure if credentials are wrong.
+
+#### `get_status`
+**Input:** `{ card_id?: string }`
+**Output:** Multi-line status string, e.g.:
+```
+📶  Device status:    ✅ ONLINE (2m ago)
+🌡️  Water temp:       27.5°C
+🎯  Target (pool):    30°C
+⚡  Mode:             POOL
+🔥  Heating active:   YES
+```
+**Errors:** `card_id required` if not provided and `NIRVANA_CARD_ID` not set.
+
+#### `set_temperature`
+**Input:** `{ temperature: number, mode: "pool"|"spa", card_id?: string }`
+- `temperature` must be finite, range 1–110 (°C: 1–50, °F: 34–110 — use the unit shown in `get_status`)
+**Output:** `✅ POOL setpoint updated to 30°` followed by raw API response.
+**Errors:** `temperature must be a finite number`, `temperature out of valid range`.
+
+#### `set_mode`
+**Input:** `{ mode: "POOL"|"SPA"|"OFF", card_id?: string }`
+**Output:** `🟢 Heat pump set to POOL mode` or `🔴 Heat pump turned OFF`.
+
+#### `set_fan_mode`
+**Input:** `{ mode: "ECO"|"QUIET"|"SMART"|"BOOST", card_id?: string }`
+**Output:** `✅ Fan mode set to ECO`.
+
+#### `get_history`
+**Input:** `{ card_id?: string }`
+**Output:** JSON array of alert/error history entries.
+
+#### `reset_runtime`
+**Input:** `{ card_id?: string }`
+**Output:** `✅ Running time reset` followed by raw API response.
 
 ## MCP Config (Claude Desktop / claude-synology)
 ```json
@@ -115,15 +157,17 @@ The device hasn't checked in for more than 10 minutes. Check that the heat pump 
 
 **Docker: expected log output on healthy start**
 ```
-claude-nirvana MCP server running (SSE) on 0.0.0.0:8774
+claude-nirvana MCP server running (StreamableHTTP) on 0.0.0.0:8774
 ```
 If you see a crash instead, run `docker compose logs claude-nirvana` and check for missing env vars.
 
 ## Security notes
 
-- `.env` contains plaintext credentials — do not commit it or expose it outside the NAS
-- The SSE endpoint (`http://nas:8774/sse`) has no authentication while in active development; restrict network access or firewall the port when not in use
-- Log files in `/app/data/nirvana.log` are rotated at 500 KB; they do not contain passwords but do contain device identifiers
+- `.env` contains plaintext credentials — never commit it. Use `.env.example` as a template and keep `.env` on the NAS only.
+- Set `MCP_API_KEY` in `.env` to require authentication on the SSE endpoint. Without it, anyone on the local network can call all tools (firewall the port if `MCP_API_KEY` is not set).
+- SSE endpoint is HTTP-only by default; for internet-facing deployments, terminate TLS at a reverse proxy (e.g. Nginx or Cloudflare Tunnel).
+- Log files in `/app/data/nirvana.log` are rotated at 500 KB. Logs do not contain credentials or plaintext device IDs — device identifiers are stored as one-way hashes.
+- Rotate Nirvana credentials periodically via the Nirvana mobile app; update `.env` on the NAS after rotation.
 
 ## Tests
 ```bash

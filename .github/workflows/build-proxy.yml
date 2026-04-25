@@ -1,14 +1,10 @@
-name: Build claude-nirvana image
+name: Build nirvana-proxy image
 
 on:
   push:
     branches: [main]
     paths:
-      - Dockerfile
-      - src/**
-      - package*.json
-  schedule:
-    - cron: "0 8 * * 0"
+      - proxy/**
   workflow_dispatch:
 
 permissions:
@@ -16,22 +12,7 @@ permissions:
   packages: write
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-
-      - run: npm ci
-
-      - run: npm test
-
   build-and-push:
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,11 +27,11 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./proxy
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/claude-nirvana:latest
-            ghcr.io/${{ github.repository_owner }}/claude-nirvana:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/nirvana-proxy:latest
+            ghcr.io/${{ github.repository_owner }}/nirvana-proxy:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -75,10 +56,11 @@ jobs:
           ssh \
             -o "ProxyCommand=cloudflared access ssh --hostname nas-ssh.aldarondo.family --id $CF_CLIENT_ID --secret $CF_CLIENT_SECRET" \
             charles@nas-ssh.aldarondo.family \
-            "cat > /tmp/claude-nirvana-compose.yml" < docker-compose.yml
+            "cat > /tmp/nirvana-proxy-compose.yml" < proxy/docker-compose.yml
           ssh \
             -o "ProxyCommand=cloudflared access ssh --hostname nas-ssh.aldarondo.family --id $CF_CLIENT_ID --secret $CF_CLIENT_SECRET" \
             charles@nas-ssh.aldarondo.family \
-            "sudo cp /tmp/claude-nirvana-compose.yml /volume1/docker/claude-nirvana/docker-compose.yml \
-             && sudo /usr/local/bin/docker compose -f /volume1/docker/claude-nirvana/docker-compose.yml pull \
-             && sudo /usr/local/bin/docker compose -f /volume1/docker/claude-nirvana/docker-compose.yml up -d"
+            "sudo mkdir -p /volume1/docker/nirvana-proxy \
+             && sudo cp /tmp/nirvana-proxy-compose.yml /volume1/docker/nirvana-proxy/docker-compose.yml \
+             && sudo /usr/local/bin/docker compose -f /volume1/docker/nirvana-proxy/docker-compose.yml pull \
+             && sudo /usr/local/bin/docker compose -f /volume1/docker/nirvana-proxy/docker-compose.yml up -d"

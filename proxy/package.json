@@ -1,0 +1,13 @@
+{
+  "name": "nirvana-proxy",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "proxy.js",
+  "scripts": {
+    "start": "node proxy.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.3"
+  }
+}
