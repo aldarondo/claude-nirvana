@@ -46,6 +46,7 @@ See full plan: [LOCAL_CONTROL_PLAN.md](LOCAL_CONTROL_PLAN.md)
 - [x] 2026-04-19 — Completed: Unit tests for api.js — 12 passing tests covering listDevices, getParameters, setTemperature/HeatingMode/FanMode validation, and formatStatus; moved formatStatus to api.js (exported); fixed npm test script for Windows
 
 ## 🚫 Blocked
+- ❌ [docker-monitor:deploy-failed] GitHub Actions deploy failed (run #24920102711) — https://github.com/aldarondo/claude-nirvana/actions/runs/24920102711 — 2026-04-25 08:00 UTC
 - ❌ [docker-monitor:no-ghcr-image] Container `claude-nirvana` uses `node:20-alpine` — migrate to `ghcr.io/aldarondo/...` with a GitHub Actions build-push workflow — 2026-04-23 08:00 UTC
 - ❌ Phase 1 capture blocked: pump (MAC FC:0F:E7:98:06:0A) is on a separate IoT VLAN — not reachable from NAS subnet 192.168.0.0/24. ARP spoofing requires same L2 segment. **Charles must:** (1) find pump IP/subnet in Cox Panoramic app, (2) determine if NAS can join that VLAN, or use a device already on the IoT network as the capture host.
 <!-- log blockers here -->
