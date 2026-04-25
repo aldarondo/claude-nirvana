@@ -36,6 +36,9 @@
 
 ## ✅ Completed
 
+### 🐛 Logger regression fix (2026-04-25)
+- [x] Restored `logToolCall` / `logStatus` / `logError` exports that were dropped by the `tee → native file logging` rewrite (commit 04bf578). `src/index.js` and `tests/unit/logger.test.js` both import them; their loss broke the unit suite and every integration test that imports `src/index.js`. The build job exited 1 (run 24939492066) so no image got pushed. New `src/logger.js` keeps the new console-monkey-patching → `app.log` and adds back the structured NDJSON → `nirvana.log` path (with the original `hashId` + email/user-pool scrubbing). 43 tests pass.
+
 ### Local Control — Phase 2A (2026-04-25)
 - [x] Pump found at 192.168.0.3 via dnsmasq DHCP (MAC `52:d4:f7:98:06:0a`)
 - [x] dnsmasq updated: redirect `ws-edge.nirvanahp.com` + `nirvana.iot-endpoint.com` → NAS
