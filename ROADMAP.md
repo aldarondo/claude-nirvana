@@ -12,8 +12,10 @@ See full plan: [LOCAL_CONTROL_PLAN.md](LOCAL_CONTROL_PLAN.md)
 - [x] `[Code]` 2026-04-25 — Analyzed pcap: pump uses HTTPS REST to `nirvana.iot-endpoint.com` (uvicorn/ALB), no MQTT, no IoT Core, no TLS pinning → Phase 2A
 - [x] `[Human]` 2026-04-25 — Cox DHCP changed to .4–.122 (excludes .2 JuiceBox, .3 pump)
 - [x] `[Code]` 2026-04-25 — juicebox dnsmasq updated: reserve .3 for pump MAC, redirect `nirvana.iot-endpoint.com` → NAS
-- [ ] `[Human]` Reboot pump to trigger DHCP race → should land on .3 with NAS as DNS
-- [ ] `[Code]` Phase 2A proxy: `proxy/` — HTTPS proxy on :443, logs all pump API calls, forwards to real cloud (build-proxy.yml → ghcr.io/aldarondo/nirvana-proxy)
+- [x] `[Human]` 2026-04-25 — Reboot pump (landed at .122 — Cox ceiling fix still needed)
+- [ ] `[Human]` Change Cox DHCP ceiling from .122 → .121 so pump at .122 is outside pool → forces DHCPDISCOVER → dnsmasq wins with .3
+- [ ] `[Human]` Reboot pump again after Cox ceiling fix
+- [x] `[Code]` 2026-04-25 — Phase 2A proxy built: `proxy/` — nginx routes nirvana.iot-endpoint.com:443→proxy container HTTP:8444; proxy logs+forwards to real cloud; build-proxy.yml deploys via sshpass; nginx conf written to NAS sites-enabled
 
 ## 🔲 Backlog
 
@@ -33,7 +35,7 @@ See full plan: [LOCAL_CONTROL_PLAN.md](LOCAL_CONTROL_PLAN.md)
 - [x] `[Code]` 2026-04-25 — Weekly scheduled rebuild — `schedule: cron: "0 8 * * 0"` in build.yml picks up base-image security patches every Sunday
 
 ### Local Control — Phase 2 (pending Phase 1 results)
-- [ ] `[Code]` Phase 2A — Local proxy server (if no TLS pinning)
+- [x] `[Code]` 2026-04-25 — Phase 2A — Local proxy server (no TLS pinning confirmed) — COMPLETE
 - [ ] `[Code]` Phase 2B — AWS IoT direct connection (if TLS pinning blocks 2A)
 - [ ] `[Code]` Phase 2C — Modbus/RS485 wired control (if hardware supports it — check nameplate)
 - [ ] `[Code]` Phase 3 — Replace MCP primary path: local → cloud fallback → email alert

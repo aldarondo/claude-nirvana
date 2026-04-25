@@ -54,29 +54,23 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Install cloudflared
+      - name: Install cloudflared and sshpass
         run: |
           curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
           sudo dpkg -i /tmp/cloudflared.deb
-
-      - name: Load SSH deploy key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.NAS_SSH_PRIVATE_KEY }}
-
-      - name: Add NAS to known_hosts
-        run: echo "${{ secrets.NAS_SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          sudo apt-get install -y sshpass
 
       - name: Deploy to NAS
         env:
+          SSHPASS: ${{ secrets.NAS_SSH_PASSWORD }}
           CF_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
-          ssh \
+          sshpass -e ssh -o StrictHostKeyChecking=no \
             -o "ProxyCommand=cloudflared access ssh --hostname nas-ssh.aldarondo.family --id $CF_CLIENT_ID --secret $CF_CLIENT_SECRET" \
             charles@nas-ssh.aldarondo.family \
             "cat > /tmp/claude-nirvana-compose.yml" < docker-compose.yml
-          ssh \
+          sshpass -e ssh -o StrictHostKeyChecking=no \
             -o "ProxyCommand=cloudflared access ssh --hostname nas-ssh.aldarondo.family --id $CF_CLIENT_ID --secret $CF_CLIENT_SECRET" \
             charles@nas-ssh.aldarondo.family \
             "sudo cp /tmp/claude-nirvana-compose.yml /volume1/docker/claude-nirvana/docker-compose.yml \

@@ -8,8 +8,10 @@ const express = require('express');
 const { createProxyMiddleware, responseInterceptor } = require('http-proxy-middleware');
 
 const TARGET = 'https://nirvana.iot-endpoint.com';
-const PORT = process.env.PROXY_PORT ? parseInt(process.env.PROXY_PORT) : 443;
+const PORT = process.env.PROXY_PORT ? parseInt(process.env.PROXY_PORT) : 8444;
 const LOG_BODIES = process.env.LOG_BODIES !== 'false';
+// HTTP_MODE=true: plain HTTP (nginx terminates TLS upstream, forwards HTTP to us)
+const HTTP_MODE = process.env.HTTP_MODE === 'true';
 
 const app = express();
 
@@ -78,15 +80,22 @@ app.use(
   })
 );
 
-const certDir = process.env.CERT_DIR || '/certs';
-const key = fs.readFileSync(`${certDir}/server.key`);
-const cert = fs.readFileSync(`${certDir}/server.crt`);
-
-https.createServer({ key, cert }, app).listen(PORT, '0.0.0.0', () => {
-  console.log(`[nirvana-proxy] HTTPS proxy listening on :${PORT}`);
-  console.log(`[nirvana-proxy] Forwarding pump traffic to ${TARGET}`);
-  console.log(`[nirvana-proxy] LOG_BODIES=${LOG_BODIES}`);
-});
+if (HTTP_MODE) {
+  http.createServer(app).listen(PORT, '0.0.0.0', () => {
+    console.log(`[nirvana-proxy] HTTP proxy listening on :${PORT} (nginx handles TLS)`);
+    console.log(`[nirvana-proxy] Forwarding pump traffic to ${TARGET}`);
+    console.log(`[nirvana-proxy] LOG_BODIES=${LOG_BODIES}`);
+  });
+} else {
+  const certDir = process.env.CERT_DIR || '/certs';
+  const key = fs.readFileSync(`${certDir}/server.key`);
+  const cert = fs.readFileSync(`${certDir}/server.crt`);
+  https.createServer({ key, cert }, app).listen(PORT, '0.0.0.0', () => {
+    console.log(`[nirvana-proxy] HTTPS proxy listening on :${PORT}`);
+    console.log(`[nirvana-proxy] Forwarding pump traffic to ${TARGET}`);
+    console.log(`[nirvana-proxy] LOG_BODIES=${LOG_BODIES}`);
+  });
+}
 
 // Health check on HTTP :8088 (doesn't need TLS)
 http.createServer((_req, res) => res.end('ok')).listen(8088);
