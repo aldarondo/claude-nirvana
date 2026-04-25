@@ -6,13 +6,13 @@ services:
     volumes:
       - ./data:/app/data
     ports:
-      - "8773:8773"
+      - "8774:8774"
     environment:
       - NIRVANA_USERNAME=${NIRVANA_USERNAME}
       - NIRVANA_PASSWORD=${NIRVANA_PASSWORD}
       - NIRVANA_CARD_ID=${NIRVANA_CARD_ID}
       - MCP_TRANSPORT=${MCP_TRANSPORT:-sse}
-      - MCP_PORT=${MCP_PORT:-8773}
+      - MCP_PORT=${MCP_PORT:-8774}
     logging:
       driver: "json-file"
       options:
