@@ -3,12 +3,7 @@ services:
     image: ghcr.io/aldarondo/nirvana-proxy:latest
     container_name: nirvana-proxy
     restart: unless-stopped
-    ports:
-      - "8443:8443"
-      - "8088:8088"
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
+    network_mode: host
     environment:
       - LOG_BODIES=true
       - PROXY_PORT=8443
