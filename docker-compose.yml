@@ -6,7 +6,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
-    command: sh -c "node src/index.js 2>&1 | tee -a /app/logs/app.log"
     ports:
       - "8774:8774"
     environment:

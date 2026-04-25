@@ -9,6 +9,7 @@
  *   NIRVANA_CARD_ID   - Device card_id (get from list_devices if unknown)
  */
 
+import './logger.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
